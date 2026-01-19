@@ -44,15 +44,17 @@ def chip_key_loop(key_queue: Queue):
 
         if value == 0 and "shift" in name:
             shift_down = False
+        elif value == 1 and "shift" in name:
+            shift_down = True
+            return
+
+        if value == 0 and "shift" in name and not expanding:
             expected_string = list(buffer.get_prev_word())
             expected_string.append(" ")
             if expected_string[0].isupper():
                 expected_string[0] = expected_string[0].lower()
             else:
                 expected_string[0] = expected_string[0].upper()
-        elif value == 1 and "shift" in name:
-            shift_down = True
-            return
 
         elif value == 0:
             return
