@@ -27,3 +27,12 @@ class Duration:
 
     def __repr__(self) -> str:
         return f"Duration(seconds={self._seconds})"
+
+
+def safe_get_duration(duration_ms, duration_s, default):
+    if duration_ms:
+        return Duration(milliseconds=duration_ms)
+    elif duration_s:
+        return Duration(seconds=duration_s)
+    else:
+        return default

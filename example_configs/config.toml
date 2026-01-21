@@ -1,28 +1,29 @@
-#general notification config(not qt specific)
+# general notification config(not qt specific)
 [general]
-#used to set between "charachorder" mode and "fuzzy chips", later will support different chording methods in charachroder,defaults to charachorder
-#if using charachorder mode will parse chords.json file to get chords 
-#if in "fuzzy chips" mode will parse chips.toml which should be your entire fuzzy chips config
+# used to set between "charachorder" mode and "fuzzy chips", later will support different chording methods in charachroder,defaults to charachorder
+# if using charachorder mode will parse chords.json file to get chords
+# if in "fuzzy chips" mode will parse chips.toml which should be your entire fuzzy chips config
 mode = "fuzzy chips"
+# if the internal buffer ends with one of the keys as a word it will execute the command.
+# most users can ignore the clear buffer command but may want to set up a reoload config command
+# in this case if you type "<space>RL<space>" it will reaload the config in most situations
+command_map = { "RL" = ["reload_config"], "CB" = ["clear_buffer"] }
+
 [notification]
 title = "possible missed chord"
 message = "$triggers = $chord, baka"
-mode = "auto" #auto, notify,qt, auto is the default and recommended, the only reason to change this is you might want to use notify mode if you are using an x11 tilling window  manger
+mode = "auto"  # auto, notify,qt, auto is the default and recommended, the only reason to change this is you might want to use notify mode if you are using an x11 tilling window  manger
+# only one of the duration fields should be present, if both are present the milliseconds will override the seconds, defaults to 4 seconds
+# duration_milliseconds = 4000
+duration_seconds = 6
 
-#only one of the duration fields should be present, if both are present the milliseconds will override the seconds, defaults to 4 seconds
-# duration_milliseconds = 4000 
-duration_seconds = 6 
-
-
-#filters out triggers and chords
+# filters out triggers and chords
 [filter]
 excluded_chords = ["have", "I"]
 
-#qt notification specific settings
+# qt notification specific settings
 [qt]
-duration_height = 8# height of duration bar set to 0 to hide, default = 8
-max_notifications = 4 #if <= 0 then unlimited, defaults to three
-window_width =  400 #defaults to 400
-window_height = 100 #defaults to 100
-
-
+duration_height = 8  # height of duration bar set to 0 to hide, default = 8
+max_notifications = 4  # if <= 0 then unlimited, defaults to three
+window_width = 400  # defaults to 400
+window_height = 100  # defaults to 100

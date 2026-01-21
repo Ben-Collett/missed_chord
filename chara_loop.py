@@ -1,20 +1,20 @@
 import utils
 from my_key_event import TERMINATE_EVENT
+from config import current_config
 import keyboard_utils
 from collections import deque
 import send_notification
 from queue import Queue
+from buffer import RingBuffer
+from commands import Commands
+from logger import log_warning
 
 
 def chara_key_loop(key_queue: Queue):
     shift_counter = 0
     meta_counter = 0
 
-    json = utils.load_json()
-    chords = utils.ascii_only(json)
-    reversed_chords = utils.reverse_dict(chords)
-    max_output_length = max(map(len, chords.values()))
-    queue = deque(maxlen=max_output_length+1)
+    buffer = RingBuffer(100)
     backspace_queue = deque()
 
     probably_chording = False
@@ -44,6 +44,8 @@ def chara_key_loop(key_queue: Queue):
         pressed_or_held_key = pressed_key
         released_key = event.value == 0
         is_space = keyboard_utils.is_space(name)
+        chords = current_config.data
+        reversed_chords = current_config.reversed
 
         is_backspace = event.name == "backspace"
         utf = None
@@ -61,15 +63,15 @@ def chara_key_loop(key_queue: Queue):
             if backspace_counter > len(prev_chord)+1:
                 backspace_counter = 0
                 changing_case = False
-            if len(queue) > 0:
-                queue.pop()
+            if len(buffer) > 0:
+                buffer.backspace()
             return
         if backspace_counter > 0:
             backspace_queue.clear()
             changing_case = False
             if utf is not None:
                 backspace_counter -= 1
-                queue.append(utf)
+                buffer.add(utf)
             return
 
         is_shift = keyboard_utils.is_shift(name)
@@ -90,8 +92,8 @@ def chara_key_loop(key_queue: Queue):
         # TODO: shift,both ways
 
         if is_backspace and pressed_or_held_key:
-            if len(queue) > 0:
-                backspace_queue.append(queue.pop())
+            if len(buffer) > 0:
+                backspace_queue.append(buffer.backspace())
                 if frozenset(backspace_queue) in chords.keys():
                     probably_chording = True
                     expected_chording_string = chords[frozenset(
@@ -108,11 +110,11 @@ def chara_key_loop(key_queue: Queue):
         if released_key:
             return
         if meta_counter > 0 or keyboard_utils.is_arrow(name):
-            queue.clear()
+            buffer.clear()
             return
 
         if utf is not None and utf.isprintable():
-            queue.append(utf)
+            buffer.add(utf)
             if probably_chording:
                 if len(probably_chording_string) == 0:
                     probably_chording_string = utf.lower()
@@ -121,18 +123,30 @@ def chara_key_loop(key_queue: Queue):
             elif keyboard_utils.is_space(name):
                 tmp = ""
                 # using 2 because need to skip the first element in the negative direction which is always a " "
-                for i in range(2, max_output_length+1):
-                    if i > len(queue):
+                for i in range(2, current_config.max_output_length+1):
+                    if i > len(buffer):
                         break
-                    tmp = queue[-i]+tmp
+                    ls = buffer.get()
+                    tmp = ls[-i]+tmp
                     behind_is_space = True  # default to true if the buffer is to small
-                    if i+1 <= len(queue):
-                        behind_is_space = queue[-i-1] == " "
+                    if i+1 <= len(ls):
+                        behind_is_space = ls[-i-1] == " "
 
                     if utils.uncapitalize(tmp) in reversed_chords.keys() and behind_is_space:
                         inputs = reversed_chords[utils.uncapitalize(tmp)]
                         options = utils.sets_to_string(inputs)
                         send_notification.display_message(tmp, options)
+
+            if name == "space" and buffer.get_trailing_white_space() == " ":
+                prev_word = buffer.get_prev_word()
+                if prev_word in current_config.command_map.keys():
+                    for command in current_config.command_map[prev_word]:
+                        if command == Commands.RELOAD:
+                            current_config.reload()
+                        elif command == Commands.CLEAR_BUFFER:
+                            buffer.clear()
+                        else:
+                            log_warning("unknown command somehow", command)
 
             # auto handles stopping when typign space
             if not expected_chording_string.startswith(probably_chording_string):

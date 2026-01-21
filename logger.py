@@ -4,8 +4,10 @@ YELLOW = "\033[33m"
 RESET = "\033[0m"
 
 
-def log_warning(msg):
+def log_warning(*args, sep=" ", end="\n"):
     if platform.system() == "Windows":
-        print(str(msg))
+        print(*args, sep=sep, end=end)
     else:
-        print(f"{YELLOW}{str(msg)}{RESET}")
+        print(YELLOW, end="")
+        print(*args, sep=sep, end="")
+        print(RESET, end=end)

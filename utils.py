@@ -3,6 +3,7 @@ import tomllib
 import os
 from config_manager import ConfigManager
 from my_config_manager import config_manager
+from commands import Commands
 
 
 def _file_exist(path):
@@ -19,6 +20,18 @@ def reverse_dict(d: dict):
     for k, v in d.items():
         rev.setdefault(v, []).append(k)
     return rev
+
+
+def inplace_merge_dicts(dict1: dict | None, dict2: dict | None) -> None:
+    """
+    stores in dict1
+    """
+
+    if dict1 is None or dict2 is None:
+        return
+
+    for key, val in dict2.items():
+        dict1[key] = val
 
 
 def sets_to_string(sets: list[frozenset[str]]) -> list[str]:
@@ -76,13 +89,23 @@ def load_chips():
         data = tomllib.load(file)
 
     out = {}
+    commands = {}
     chips: dict[str, str] = data["chips"]
 
     for key, val in chips.items():
         if isinstance(val, str):
             out[frozenset(key)] = val
+        elif isinstance(val, list):
+            current_commands: list[Commands] = []
+            for cmd in val:
+                if cmd == "restart" or cmd == "reload_config":
+                    current_commands.append(Commands.RELOAD)
+                elif cmd == "clear_buffer":
+                    current_commands.append(Commands.CLEAR_BUFFER)
+            if len(current_commands) > 0:
+                commands[key] = current_commands
 
-    return out
+    return out, commands
 
 
 def _printable_ascii_only_list(input: list[int]) -> bool:

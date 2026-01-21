@@ -1,16 +1,15 @@
-import utils
+from config import current_config
 from my_key_event import TERMINATE_EVENT
-import keyboard_utils
 from buffer import RingBuffer
 import send_notification
+from logger import log_warning
 from queue import Queue
 from my_key_event import MyKeyEvent
+from commands import Commands
 
 
 def chip_key_loop(key_queue: Queue):
 
-    chips = utils.load_chips()
-    reversed_chips = utils.reverse_dict(chips)
     buffer = RingBuffer(200)
     shift_down = False
     meta_down = False
@@ -22,6 +21,8 @@ def chip_key_loop(key_queue: Queue):
         name = event.name
         value = event.value
 
+        chips = current_config.data
+        reversed_chips = current_config.reversed
         ch = None
         if value == 1:
             if name == "space":
@@ -48,8 +49,10 @@ def chip_key_loop(key_queue: Queue):
             shift_down = True
             return
 
+        prev_word = buffer.get_prev_word()
+
         if value == 0 and "shift" in name and not expanding:
-            expected_string = list(buffer.get_prev_word())
+            expected_string = list(prev_word)
             expected_string.append(" ")
             if expected_string[0].isupper():
                 expected_string[0] = expected_string[0].lower()
@@ -65,7 +68,6 @@ def chip_key_loop(key_queue: Queue):
             return
 
         if name == "space" and not expanding:
-            prev_word = buffer.get_prev_word()
             white_space = buffer.get_trailing_white_space()
             prev_word_set = frozenset(prev_word)
             if prev_word_set in chips.keys() and white_space == "":
@@ -94,6 +96,15 @@ def chip_key_loop(key_queue: Queue):
             if len(expected_string) > 0:
                 expected_string.pop(0)
             buffer.add(ch)
+        if name == "space" and buffer.get_trailing_white_space() == " " and prev_word in current_config.command_map:
+            commands = current_config.command_map[prev_word]
+            for command in commands:
+                if command == Commands.RELOAD:
+                    current_config.reload()
+                elif command == Commands.CLEAR_BUFFER:
+                    buffer.clear()
+                else:
+                    log_warning("unknown command somehow", command)
 
     while True:
         event = key_queue.get()

@@ -1,14 +1,15 @@
 import tomllib
 import os
-from utils import uncapitalize
-from duration import Duration
+from duration import Duration, safe_get_duration
 from chording_modes import ChordingModes
 from logger import log_warning
 from my_config_manager import config_manager
 from constants import FILE_NAME
-
-
+from commands import Commands
 from pathlib import Path
+
+from utils import uncapitalize, load_json, ascii_only, load_chips, reverse_dict
+from utils import inplace_merge_dicts
 
 
 def safe_get_map(m, *args, default=None):
@@ -63,32 +64,41 @@ DEFAULT_DURATION_HEIGHT = 4
 class Config:
     def __init__(self, config_map={}):
         self.update_config(config_map)
+        self.on_reload = []
+
+    def reload(self):
+        print("reloading")
+        self.update_config(read_config(get_config_path()))
+        for func in self.on_reload:
+            func()
 
     def notification_message(self, triggers, message):
-        return self.notification_message_template.replace("$triggers", str(triggers)).replace("$chord", message)
+        out = self.notification_message_template.replace(
+            "$triggers", str(triggers))
+        out = out.replace("$chord", message)
+        return out
 
     def update_config(self, config_map):
+        def get_setting(*args, default=None):
+            return safe_get_map(config_map, *args, default=default)
+
         def general_setting(label, default):
-            return safe_get_map(config_map, "general", label, default=default)
+            return get_setting("general", label, default=default)
 
         def qt_setting(label, default):
-            return safe_get_map(config_map, "qt", label, default=default)
+            return get_setting("qt", label, default=default)
 
         def notification_setting(label, default):
-            return safe_get_map(config_map, "notification", label, default=default)
+            return get_setting("notification", label, default=default)
 
         def filter_setting(label, default=[]):
-            return safe_get_map(config_map, "filter", label, default=default)
+            return get_setting("filter", label, default=default)
 
         duration_s = notification_setting("duration_seconds", None)
         duration_ms = notification_setting("duration_milliseconds", None)
 
-        if duration_ms:
-            self.duration = Duration(milliseconds=duration_ms)
-        elif duration_s:
-            self.duration = Duration(seconds=duration_s)
-        else:
-            self.duration = DEFAULT_DURATION
+        self.duration = safe_get_duration(
+            duration_ms, duration_s, DEFAULT_DURATION)
 
         self.max_qt_notifications = qt_setting(
             "max_notifications", DEFAULT_MAX_QT_NOTIFICATIONS)
@@ -99,16 +109,7 @@ class Config:
         self.excluded_chords = [uncapitalize(c) for c in self.excluded_chords]
 
         mode = notification_setting("mode", "auto")
-
-        if mode == "qt":
-            self.qt_mode = True
-        elif mode == "notify":
-            self.qt_mode = False
-        elif mode == "auto":
-            self.qt_mode = not is_on_wayland()
-        else:
-            log_warning("invalid mode selected, defaulting to auto")
-            self.qt_mode = not is_on_wayland()
+        self._update_notification_mode(mode)
 
         self.notification_title = notification_setting(
             "title", DEFAULT_NOTIFICATION_TITLE)
@@ -126,12 +127,47 @@ class Config:
             log_warning("invalid mode, defaulting to charachorder")
             self.mode = ChordingModes.CHARA_CHORDER
 
+        self.command_map = {}
+        external_commands: dict[str, list[Commands]] | None = None
+        if self.mode == ChordingModes.CHARA_CHORDER:
+            self.data = ascii_only(load_json())
+        else:
+            self.data, external_commands = load_chips()
+
+        self.reversed = reverse_dict(self.data)
+        self.max_output_length = max(map(len, self.reversed.keys()))
+        command_map = general_setting(
+            "command_map", {"RL": ["reload_config"], "CB": ["clear_buffer"]})
+
+        inplace_merge_dicts(self.command_map, external_commands)
+
+        for key, val in command_map.items():
+            commands = []
+            for command_str in val:
+                try:
+                    command = Commands(command_str)
+                    commands.append(command)
+                except ValueError:
+                    log_warning(f"invalid command name: {
+                                command_str}, skipping")
+            self.command_map[key] = commands
+
+    def _update_notification_mode(self, mode: str):
+        if mode == "qt":
+            self.qt_mode = True
+        elif mode == "notify":
+            self.qt_mode = False
+        elif mode == "auto":
+            self.qt_mode = not is_on_wayland()
+        else:
+            log_warning("invalid mode selected, defaulting to auto")
+            self.qt_mode = not is_on_wayland()
+
     def __str__(self):
         lines = "\n".join(f"  {k}: {v!r}" for k, v in vars(self).items())
         return f"{self.__class__.__name__} {{\n{lines}\n}}"
 
 
-print(get_config_path())
 current_config = Config(read_config(get_config_path()))
 
 if __name__ == "__main__":

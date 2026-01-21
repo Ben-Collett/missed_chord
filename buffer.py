@@ -17,6 +17,9 @@ class RingBuffer:
     def __str__(self):
         return str(self.buffer)
 
+    def __len__(self):
+        return len(self.buffer)
+
     def get_white_space_before_prev_word(self) -> str:
         chars = self.get()
         if not chars:
@@ -55,7 +58,6 @@ class RingBuffer:
         elif lower == 0 and not chars[lower].isspace():
             lower += 1
 
-        print("chars", chars[lower:upper+1])
         return ''.join(chars[lower:upper+1])
 
     def should_captlize_prev_word(self, captilize_after=[]) -> bool:
@@ -87,7 +89,7 @@ class RingBuffer:
             return None
         upper = len(chars) - 1
 
-        while chars[upper] == " ":
+        while upper > 0 and chars[upper] == " ":
             upper -= 1
         if upper < 0 or chars[upper] == " ":
             return None
@@ -103,10 +105,7 @@ class RingBuffer:
 
     def backspace(self):
         if not self.is_empty():
-            self.buffer.pop()
-
-    def ends_with(self, val: str):
-        chars = self.get()
+            return self.buffer.pop()
 
     def is_empty(self):
         return len(self.buffer) == 0

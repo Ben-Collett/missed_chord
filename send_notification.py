@@ -4,9 +4,6 @@ from config import current_config
 
 missed_chords: dict[str, int] = {}
 
-if current_config.qt_mode:
-    from qt_bridge import bridge
-
 
 def display_message(chord: str, triggers: list[str]):
     if uncapitalize(chord) in current_config.excluded_chords:
@@ -21,6 +18,7 @@ def display_message(chord: str, triggers: list[str]):
     _print_map()
 
     if current_config.qt_mode:
+        from qt_bridge import bridge
         bridge.notify.emit(title, message)
     else:
         subprocess.run(
