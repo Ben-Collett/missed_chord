@@ -6,20 +6,21 @@ from logger import log_warning
 from queue import Queue
 from my_key_event import MyKeyEvent
 from commands import Commands
+from modifier_utils import DownMods
 
 
 def chip_key_loop(key_queue: Queue):
 
     buffer = RingBuffer(200)
-    shift_down = False
-    meta_down = False
     expected_string = []
 
     def process_event(event: MyKeyEvent):
         nonlocal expected_string, buffer
-        nonlocal shift_down, meta_down
         name = event.name
         value = event.value
+        down_modes = DownMods.from_event(event)
+        shift_down = down_modes.shift_down
+        meta_down = down_modes.meta_down
 
         chips = current_config.data
         reversed_chips = current_config.reversed
@@ -36,22 +37,14 @@ def chip_key_loop(key_queue: Queue):
 
         expanding = len(expected_string) != 0
 
-        if "windows" in event.name:
-            meta_down = event.value == 1
-
         if meta_down:
             buffer.clear()
             return
 
-        if value == 0 and "shift" in name:
-            shift_down = False
-        elif value == 1 and "shift" in name:
-            shift_down = True
-            return
-
         prev_word = buffer.get_prev_word()
 
-        if value == 0 and "shift" in name and not expanding:
+        is_shift_release_event = event.is_down_event and "shift" in name
+        if is_shift_release_event and not expanding:
             expected_string = list(prev_word)
             expected_string.append(" ")
             if expected_string[0].isupper():

@@ -24,7 +24,7 @@ def main():
         value = 0
         if event.event_type == keyboard.KEY_DOWN:
             value = 1
-        my_event = MyKeyEvent(event.name, value)
+        my_event = MyKeyEvent(event.name, value, event.modifiers)
         key_queue.put_nowait(my_event)
 
     proc = None
@@ -39,9 +39,9 @@ def main():
 
         def read_keys_linux():
             for line in proc.stdout:
-                content = line.strip().split(" ")
-                if len(content) == 2:
-                    key_queue.put_nowait(MyKeyEvent(*content))
+                event = MyKeyEvent.parse_line(line)
+                if event:
+                    key_queue.put_nowait(event)
 
         key_reader = threading.Thread(target=read_keys_linux)
         key_reader.start()

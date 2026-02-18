@@ -1,5 +1,5 @@
 import utils
-from my_key_event import TERMINATE_EVENT
+from my_key_event import TERMINATE_EVENT, MyKeyEvent
 from config import current_config
 import keyboard_utils
 from collections import deque
@@ -7,12 +7,11 @@ import send_notification
 from queue import Queue
 from buffer import RingBuffer
 from commands import Commands
+from modifier_utils import DownMods
 from logger import log_warning
 
 
 def chara_key_loop(key_queue: Queue):
-    shift_counter = 0
-    meta_counter = 0
 
     buffer = RingBuffer(100)
     backspace_queue = deque()
@@ -27,9 +26,7 @@ def chara_key_loop(key_queue: Queue):
     backspace_counter = 0
     bc = 0
 
-    def process_event(event):
-        nonlocal shift_counter
-        nonlocal meta_counter
+    def process_event(event: MyKeyEvent):
         nonlocal backspace_counter
         nonlocal probably_chording
         nonlocal expected_chording_string
@@ -40,18 +37,19 @@ def chara_key_loop(key_queue: Queue):
         nonlocal bc
 
         name: str = event.name
-        pressed_key = event.value == 1
+        pressed_key = event.is_down_event
         pressed_or_held_key = pressed_key
-        released_key = event.value == 0
+        released_key = event.is_up_event
         is_space = keyboard_utils.is_space(name)
         chords = current_config.data
         reversed_chords = current_config.reversed
+        down_modes = DownMods.from_event(event)
 
         is_backspace = event.name == "backspace"
         utf = None
         if len(event.name) == 1:
             utf = event.name
-            if shift_counter > 0:
+            if down_modes.shift_down:
                 utf = utf.upper()
         if is_space:
             utf = " "
@@ -75,10 +73,6 @@ def chara_key_loop(key_queue: Queue):
             return
 
         is_shift = keyboard_utils.is_shift(name)
-        if is_shift and pressed_or_held_key and not just_shifted:
-            shift_counter += 1
-        elif is_shift and released_key:
-            shift_counter -= 1
 
         if is_shift and pressed_or_held_key:
             just_shifted = True
@@ -88,7 +82,6 @@ def chara_key_loop(key_queue: Queue):
         else:
             just_shifted = False
 
-        is_meta = keyboard_utils.is_meta(name)
         # TODO: shift,both ways
 
         if is_backspace and pressed_or_held_key:
@@ -102,14 +95,10 @@ def chara_key_loop(key_queue: Queue):
 
         if (not is_backspace) and pressed_or_held_key:
             backspace_queue.clear()
-        if is_meta and pressed_key:
-            meta_counter += 1
-        elif is_meta and released_key:
-            meta_counter -= 1
 
         if released_key:
             return
-        if meta_counter > 0 or keyboard_utils.is_arrow(name):
+        if down_modes.meta_down or keyboard_utils.is_arrow(name):
             buffer.clear()
             return
 
