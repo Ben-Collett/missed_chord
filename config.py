@@ -28,11 +28,10 @@ def safe_get_map(m, *args, default=None):
 
 
 def get_config_path() -> Path:
-    if Path(FILE_NAME).is_file():
-        return Path(FILE_NAME)
+    path = Path(FILE_NAME)
+    if not path.is_file():
+        path = config_manager.find_config_file(FILE_NAME)
 
-    path = config_manager.find_config_file(FILE_NAME)
-    print(path)
     if path and path.is_file():
         return path
 
@@ -67,8 +66,9 @@ class Config:
         self.on_reload = []
 
     def reload(self):
-        print("reloading")
-        self.update_config(read_config(get_config_path()))
+        path = get_config_path()
+        print(f"reloading config: {path}")
+        self.update_config(read_config(path))
         for func in self.on_reload:
             func()
 
@@ -168,7 +168,9 @@ class Config:
         return f"{self.__class__.__name__} {{\n{lines}\n}}"
 
 
-current_config = Config(read_config(get_config_path()))
+path = get_config_path()
+print(f"loading config: {path}")
+current_config = Config(read_config(path))
 
 if __name__ == "__main__":
     print(get_config_path())

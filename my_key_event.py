@@ -1,7 +1,33 @@
 from typing import Self
+from typing import Optional
 
 
 class MyKeyEvent:
+    def to_utf(self, shift_down: bool) -> Optional[str]:
+        name = self.name
+
+        if len(name) == 1 and shift_down:
+            return name.upper()
+        if len(name) == 1:
+            return name
+
+        if name == "space":
+            return " "
+        if name == "tab":
+            return "\t"
+        if name == "return":
+            return "\n"
+        return None
+
+    @property
+    def is_arrow(self):
+        arrows = ["left", "down", "up", "right"]
+        return self.name in arrows
+
+    @property
+    def is_backspace(self):
+        return self.name == "backspace"
+
     @property
     def is_down_event(self):
         return self.value == 1
