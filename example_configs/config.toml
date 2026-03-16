@@ -17,9 +17,14 @@ mode = "auto"  # auto, notify,qt, auto is the default and recommended, the only 
 # duration_milliseconds = 4000
 duration_seconds = 6
 
-# filters out triggers and chords
+# filters when a missed chord/chip notification should send.
+# based on the output of chords/chips not the triggers
 [filter]
 excluded_chords = ["have", "I"]
+# white_listed chords: if not empty, only chords in this list will be shown (all others filtered out)
+# if a string is in both excluded and white_listed for some reason it will be filtered out
+# leave empty or commented out to disable this filter
+white_listed = []
 
 # qt notification specific settings
 [qt]

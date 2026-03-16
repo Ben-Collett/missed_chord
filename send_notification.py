@@ -6,7 +6,11 @@ missed_chords: dict[str, int] = {}
 
 
 def display_message(chord: str, triggers: list[str]):
-    if uncapitalize(chord) in current_config.excluded_chords:
+    chord_lower = uncapitalize(chord)
+    if chord_lower in current_config.excluded_chords:
+        return
+
+    if current_config.white_listed and chord_lower not in current_config.white_listed:
         return
 
     title = current_config.notification_title
@@ -19,11 +23,17 @@ def display_message(chord: str, triggers: list[str]):
 
     if current_config.qt_mode:
         from qt_bridge import bridge
+
         bridge.notify.emit(title, message)
     else:
         subprocess.run(
-            ['notify-send', '-t',
-                str(int(current_config.duration.milliseconds)), title, message]
+            [
+                "notify-send",
+                "-t",
+                str(int(current_config.duration.milliseconds)),
+                title,
+                message,
+            ]
         )
 
 

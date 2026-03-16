@@ -73,8 +73,7 @@ class Config:
             func()
 
     def notification_message(self, triggers, message):
-        out = self.notification_message_template.replace(
-            "$triggers", str(triggers))
+        out = self.notification_message_template.replace("$triggers", str(triggers))
         out = out.replace("$chord", message)
         return out
 
@@ -97,29 +96,33 @@ class Config:
         duration_s = notification_setting("duration_seconds", None)
         duration_ms = notification_setting("duration_milliseconds", None)
 
-        self.duration = safe_get_duration(
-            duration_ms, duration_s, DEFAULT_DURATION)
+        self.duration = safe_get_duration(duration_ms, duration_s, DEFAULT_DURATION)
 
         self.max_qt_notifications = qt_setting(
-            "max_notifications", DEFAULT_MAX_QT_NOTIFICATIONS)
+            "max_notifications", DEFAULT_MAX_QT_NOTIFICATIONS
+        )
 
         self.show_duration_bar = qt_setting("show_duration", default=True)
 
         self.excluded_chords = filter_setting("excluded_chords")
         self.excluded_chords = [uncapitalize(c) for c in self.excluded_chords]
 
+        self.white_listed = filter_setting("white_listed")
+        self.white_listed = [uncapitalize(c) for c in self.white_listed]
+
         mode = notification_setting("mode", "auto")
         self._update_notification_mode(mode)
 
         self.notification_title = notification_setting(
-            "title", DEFAULT_NOTIFICATION_TITLE)
+            "title", DEFAULT_NOTIFICATION_TITLE
+        )
         self.notification_message_template = notification_setting(
-            "message", DEFAULT_NOTIFICATION_MESSAGE)
+            "message", DEFAULT_NOTIFICATION_MESSAGE
+        )
 
         self.window_width = qt_setting("window_width", DEFAULT_WINDOW_WIDTH)
         self.window_height = qt_setting("window_height", DEFAULT_WINDOW_HEIGHT)
-        self.duration_height = qt_setting(
-            "duration_height", DEFAULT_DURATION_HEIGHT)
+        self.duration_height = qt_setting("duration_height", DEFAULT_DURATION_HEIGHT)
         mode = general_setting("mode", "charachorder")
         try:
             self.mode = ChordingModes(mode)
@@ -137,7 +140,8 @@ class Config:
         self.reversed = reverse_dict(self.data)
         self.max_output_length = max(map(len, self.reversed.keys()))
         command_map = general_setting(
-            "command_map", {"RL": ["reload_config"], "CB": ["clear_buffer"]})
+            "command_map", {"RL": ["reload_config"], "CB": ["clear_buffer"]}
+        )
 
         inplace_merge_dicts(self.command_map, external_commands)
 
@@ -148,8 +152,7 @@ class Config:
                     command = Commands(command_str)
                     commands.append(command)
                 except ValueError:
-                    log_warning(f"invalid command name: {
-                                command_str}, skipping")
+                    log_warning(f"invalid command name: {command_str}, skipping")
             self.command_map[key] = commands
 
     def _update_notification_mode(self, mode: str):
