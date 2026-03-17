@@ -93,6 +93,9 @@ class Config:
         def filter_setting(label, default=[]):
             return get_setting("filter", label, default=default)
 
+        def logging_setting(label, default=None):
+            return get_setting("logging", label, default=default)
+
         duration_s = notification_setting("duration_seconds", None)
         duration_ms = notification_setting("duration_milliseconds", None)
 
@@ -109,6 +112,9 @@ class Config:
 
         self.white_listed = filter_setting("white_listed")
         self.white_listed = [uncapitalize(c) for c in self.white_listed]
+
+        self.log_to_stdout = logging_setting("log_to_stdout", False)
+        self.log_to_path = logging_setting("log_to_path", "")
 
         mode = notification_setting("mode", "auto")
         self._update_notification_mode(mode)

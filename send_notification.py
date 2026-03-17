@@ -1,6 +1,7 @@
 from utils import uncapitalize
 import subprocess
 from config import current_config
+from pathlib import Path
 
 missed_chords: dict[str, int] = {}
 
@@ -20,6 +21,7 @@ def display_message(chord: str, triggers: list[str]):
         missed_chords[message] = 0
     missed_chords[message] += 1
     _print_map()
+    _write_log_to_file()
 
     if current_config.qt_mode:
         from qt_bridge import bridge
@@ -38,6 +40,24 @@ def display_message(chord: str, triggers: list[str]):
 
 
 def _print_map():
-    for k, v in missed_chords.items():
-        print(k, v)
-    print("-------------------------------")
+    sorted_chords = sorted(missed_chords.items(),
+                           key=lambda x: x[1], reverse=True)
+    for k, v in sorted_chords:
+        if current_config.log_to_stdout:
+            print(k, v)
+    if current_config.log_to_stdout:
+        print("-------------------------------")
+
+
+def _write_log_to_file():
+    if not current_config.log_to_path:
+        return
+
+    log_path = Path(current_config.log_to_path).expanduser()
+
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    sorted_chords = sorted(missed_chords.items(),
+                           key=lambda x: x[1], reverse=True)
+    lines = [f"{k} {v}" for k, v in sorted_chords]
+    log_path.write_text("\n".join(lines) + "\n")

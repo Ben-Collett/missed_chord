@@ -32,3 +32,10 @@ duration_height = 8  # height of duration bar set to 0 to hide, default = 8
 max_notifications = 4  # if <= 0 then unlimited, defaults to three
 window_width = 400  # defaults to 400
 window_height = 100  # defaults to 100
+
+# logging config
+[logging]
+# log missed chords to stdout (sorted by frequency), default = false
+log_to_stdout = false
+# log to a file will create file/parent dirs if needed, default = ""
+log_to_path = ""
