@@ -3,6 +3,7 @@ import re
 from threading import Condition
 from collections import defaultdict
 from subprocess import check_output, CalledProcessError
+from ._global_data import global_data
 from ._keyboard_event import KeyboardEvent, KEY_DOWN, KEY_UP
 from ._canonical_names import all_modifiers, normalize_name
 from ._nixcommon import EV_KEY, aggregate_devices
@@ -16,23 +17,23 @@ patient_type = False
 
 
 def cleanup_key(name):
-    """ Formats a dumpkeys format to our standard. """
-    name = name.lstrip('+')
-    is_keypad = name.startswith('KP_')
-    for mod in ('Meta_', 'Control_', 'dead_', 'KP_'):
+    """Formats a dumpkeys format to our standard."""
+    name = name.lstrip("+")
+    is_keypad = name.startswith("KP_")
+    for mod in ("Meta_", "Control_", "dead_", "KP_"):
         if name.startswith(mod):
             name = name[len(mod):]
 
     # Dumpkeys is weird like that.
-    if name == 'Remove':
-        name = 'Delete'
-    elif name == 'Delete':
-        name = 'Backspace'
+    if name == "Remove":
+        name = "Delete"
+    elif name == "Delete":
+        name = "Backspace"
 
-    if name.endswith('_r'):
-        name = 'right ' + name[:-2]
-    if name.endswith('_l'):
-        name = 'left ' + name[:-2]
+    if name.endswith("_r"):
+        name = "right " + name[:-2]
+    if name.endswith("_l"):
+        name = "left " + name[:-2]
 
     return normalize_name(name), is_keypad
 
@@ -43,7 +44,7 @@ def cleanup_modifier(modifier):
         return modifier
     if modifier[:-1] in all_modifiers:
         return modifier[:-1]
-    raise ValueError('Unknown modifier {}'.format(modifier))
+    raise ValueError("Unknown modifier {}".format(modifier))
 
 
 """
@@ -52,15 +53,15 @@ then parse the output and built a table. For each scan code and modifiers we
 have a list of names and vice-versa.
 """
 
-to_name = defaultdict(list)
+scan_code_and_mods_to_name = defaultdict(list)
 from_name = defaultdict(list)
 keypad_scan_codes = set()
 
 MODIFIER_WEIGHTS = {
-    'shift': 1,
-    'alt gr': 2,
-    'alt': 3,
-    'ctrl': 4,
+    "shift": 1,
+    "alt gr": 2,
+    "alt": 3,
+    "ctrl": 4,
 }
 
 
@@ -69,10 +70,10 @@ def modifier_cost(modifiers):
 
 
 def register_key(key_and_modifiers, name):
-    scan_code, modifiers = key_and_modifiers
+    _, modifiers = key_and_modifiers
 
-    if name not in to_name[key_and_modifiers]:
-        to_name[key_and_modifiers].append(name)
+    if name not in scan_code_and_mods_to_name[key_and_modifiers]:
+        scan_code_and_mods_to_name[key_and_modifiers].append(name)
 
     # --- from_name: prefer fewer modifiers ---
     existing = from_name[name]
@@ -94,57 +95,62 @@ def register_key(key_and_modifiers, name):
 
 
 def build_tables():
-    if to_name and from_name:
+    if scan_code_and_mods_to_name and from_name:
         return
 
     modifiers_bits = {
-        'shift': 1,
-        'alt gr': 2,
-        'ctrl': 4,
-        'alt': 8,
+        "shift": 1,
+        "alt gr": 2,
+        "ctrl": 4,
+        "alt": 8,
     }
-    keycode_template = r'^keycode\s+(\d+)\s+=(.*?)$'
+    keycode_template = r"^keycode\s+(\d+)\s+=(.*?)$"
     try:
-        dump = check_output(['dumpkeys', '--keys-only'],
+        dump = check_output(["dumpkeys", "--keys-only"],
                             universal_newlines=True)
     except CalledProcessError as e:
         if e.returncode == 1:
             raise ValueError(
-                'Failed to run dumpkeys to get key names. Check if your user is part of the "tty" group, and if not, add it with "sudo usermod -a -G tty USER".')
+                'Failed to run dumpkeys to get key names. Check if your user is part of the "tty" group, and if not, add it with "sudo usermod -a -G tty USER".'
+            )
         else:
             raise
 
     for str_scan_code, str_names in re.findall(keycode_template, dump, re.MULTILINE):
         scan_code = int(str_scan_code)
         for i, str_name in enumerate(str_names.strip().split()):
-            modifiers = tuple(sorted(modifier for modifier,
-                              bit in modifiers_bits.items() if i & bit))
+            modifiers = tuple(
+                sorted(modifier for modifier,
+                       bit in modifiers_bits.items() if i & bit)
+            )
             name, is_keypad = cleanup_key(str_name)
             register_key((scan_code, modifiers), name)
             if is_keypad:
                 keypad_scan_codes.add(scan_code)
-                register_key((scan_code, modifiers), 'keypad ' + name)
+                register_key((scan_code, modifiers), "keypad " + name)
+            elif name.islower() and len(name)==1:
+                register_key((scan_code,("shift",)), name.upper())
 
     # dumpkeys consistently misreports the Windows key, sometimes
     # skipping it completely or reporting as 'alt. 125 = left win,
     # 126 = right win.
-    if (125, ()) not in to_name or to_name[(125, ())] == ['alt']:
-        to_name[(125, ())].clear()
-        if (125, ()) in from_name['alt']:
-            from_name['alt'].remove((125, ()))
-        register_key((125, ()), 'windows')
-    if (126, ()) not in to_name or to_name[(126, ())] == ['alt']:
-        to_name[(126, ())].clear()
-        if (126, ()) in from_name['alt']:
-            from_name['alt'].remove((126, ()))
-        register_key((126, ()), 'windows')
+    if (125, ()) not in scan_code_and_mods_to_name or scan_code_and_mods_to_name[(125, ())] == ["alt"]:
+        scan_code_and_mods_to_name[(125, ())].clear()
+        if (125, ()) in from_name["alt"]:
+            from_name["alt"].remove((125, ()))
+        register_key((125, ()), "windows")
+    if (126, ()) not in scan_code_and_mods_to_name or scan_code_and_mods_to_name[(126, ())] == ["alt"]:
+        scan_code_and_mods_to_name[(126, ())].clear()
+        if (126, ()) in from_name["alt"]:
+            from_name["alt"].remove((126, ()))
+        register_key((126, ()), "windows")
 
     # The menu key is usually skipped altogether, so we also add it manually.
-    if (127, ()) not in to_name:
-        register_key((127, ()), 'menu')
+    if (127, ()) not in scan_code_and_mods_to_name:
+        register_key((127, ()), "menu")
 
-    synonyms_template = r'^(\S+)\s+for (.+)$'
-    dump = check_output(['dumpkeys', '--long-info'], universal_newlines=True)
+    synonyms_template = r"^(\S+)\s+for (.+)$"
+    dump = check_output(["dumpkeys", "--long-info"], universal_newlines=True)
     for synonym_str, original_str in re.findall(synonyms_template, dump, re.MULTILINE):
         synonym, _ = cleanup_key(synonym_str)
         original, _ = cleanup_key(original_str)
@@ -156,11 +162,11 @@ def build_tables():
 device = None
 
 
-def build_device():
+def build_device(name: str):
     global device
     if device:
         return
-    device = aggregate_devices('kbd')
+    device = aggregate_devices("kbd", name)
 
 
 _down_keys = None
@@ -168,7 +174,7 @@ _down_keys = None
 
 def init():
     global _down_keys
-    build_device()
+    build_device(global_data.device_name)
     build_tables()
     _down_keys = dict()
 
@@ -178,11 +184,11 @@ _keys_cond = Condition()
 
 
 def listen(callback):
-    build_device()
+    build_device(global_data.device_name)
     build_tables()
 
     while True:
-        time, type, code, value, device_id = device.read_event()
+        time, type, code, value, device_path, device_name = device.read_event()
 
         if type != EV_KEY:
             continue
@@ -191,8 +197,11 @@ def listen(callback):
         event_type = KEY_DOWN if value else KEY_UP  # 0 = UP, 1 = DOWN, 2 = HOLD
 
         pressed_modifiers_tuple = tuple(sorted(pressed_modifiers))
-        names = to_name[(scan_code, pressed_modifiers_tuple)
-                        ] or to_name[(scan_code, ())] or ['unknown']
+        names = (
+            scan_code_and_mods_to_name[(scan_code, pressed_modifiers_tuple)]
+            or scan_code_and_mods_to_name[(scan_code, ())]
+            or ["unknown"]
+        )
         name = names[0]
         if name in all_modifiers:
             if event_type == KEY_DOWN:
@@ -209,15 +218,36 @@ def listen(callback):
                 del _down_keys[scan_code]
                 with _keys_cond:
                     _keys_cond.notify_all()
-        callback(KeyboardEvent(event_type=event_type, scan_code=scan_code, name=name,
-                 time=time, device=device_id, is_keypad=is_keypad, modifiers=pressed_modifiers_tuple))
+        callback(
+            KeyboardEvent(
+                event_type=event_type,
+                scan_code=scan_code,
+                name=name,
+                time=time,
+                device=device_path,
+                device_name=device_name,
+                is_keypad=is_keypad,
+                modifiers=pressed_modifiers_tuple,
+            )
+        )
 
 
-def write_event(scan_code, is_down):
-    build_device()
-    if is_down and patient_type and scan_code in _down_keys:
+
+def _shift_changes(scan_code):
+    normal_version = scan_code_and_mods_to_name[(scan_code,())]
+    shifted_version  = scan_code_and_mods_to_name[(scan_code,("shift",))]
+    return shifted_version != [] and normal_version != shifted_version
+
+def _write_event(scan_code, is_down, name: str, should_be_shifted: bool = False):
+    build_device(name)
+    if is_down and patient_type:
         with _keys_cond:
-            while scan_code in _down_keys:
+            # TODO: fix this
+            # there is an edge case here, if the user holds shift then shift is in the _down_keys
+            # then it will still loop because the scancode is in _down keys
+            # meaning I need to find a way that handles that but still represses shift if the user releases it
+            # so when writing Dhello it will wait for shift to be released before it starts uncessarly
+            while scan_code in _down_keys or (not should_be_shifted and _shift_changes(scan_code) and "shift" in pressed_modifiers):
                 _keys_cond.wait()
     device.write_event(EV_KEY, scan_code, int(is_down))
 
@@ -225,26 +255,21 @@ def write_event(scan_code, is_down):
 def map_name(name):
     build_tables()
 
-    if name.isalpha() and name.isupper():
-        for scan_code, modifiers in from_name[name.lower()]:
-            yield scan_code, tuple(sorted(modifiers + ('shift',)))
-        return
-    else:
-        for entry in from_name[name]:
-            yield entry
+    for entry in from_name[name]:
+        yield entry
 
-    parts = name.split(' ', 1)
-    if len(parts) > 1 and parts[0] in ('left', 'right'):
+    parts = name.split(" ", 1)
+    if len(parts) > 1 and parts[0] in ("left", "right"):
         for entry in from_name[parts[1]]:
             yield entry
 
 
-def press(scan_code):
-    write_event(scan_code, True)
+def press(scan_code, should_be_shifted: bool = False):
+    _write_event(scan_code, True, global_data.device_name, should_be_shifted)
 
 
-def release(scan_code):
-    write_event(scan_code, False)
+def release(scan_code, should_be_shifted: bool = False):
+    _write_event(scan_code, False, global_data.device_name, should_be_shifted)
 
 
 """
@@ -255,9 +280,9 @@ design
 
 def type_unicode(character):
     codepoint = ord(character)
-    hexadecimal = hex(codepoint)[len('0x'):]
+    hexadecimal = hex(codepoint)[len("0x"):]
 
-    for key in ['ctrl', 'shift', 'u']:
+    for key in ["ctrl", "shift", "u"]:
         scan_code, _ = next(map_name(key))
         press(scan_code)
 
@@ -266,12 +291,14 @@ def type_unicode(character):
         press(scan_code)
         release(scan_code)
 
-    for key in ['ctrl', 'shift', 'u']:
+    for key in ["ctrl", "shift", "u"]:
         scan_code, _ = next(map_name(key))
         release(scan_code)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def p(e):
         print(e)
+
     listen(p)

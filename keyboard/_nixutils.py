@@ -8,7 +8,7 @@ USB_BUS_TYPE = 0x03
 VENDOR = 0xFEED
 PRODUCT = 0xBEEF
 VERSION = 1
-NAME = b"Virtual Keyboard\x00"
+MAX_NAME_LENGTH = 79
 
 
 def _make_support_key_events(uinput: BufferedWriter):
@@ -27,19 +27,20 @@ def _make_support_keys(uinput: BufferedWriter):
     _make_support_standard_keys(uinput)
 
 
-def _write_metadata(uinput: BufferedWriter):
+def _write_metadata(uinput: BufferedWriter, name: str):
+    name_bytes = f"{name}\0".encode()
 
     uinput_user_dev_struct_fmt = "80sHHHHI" + "64i" * 4
     abs_vals = [0] * 64
 
     data = struct.pack(
         uinput_user_dev_struct_fmt,
-        NAME,
+        name_bytes,
         USB_BUS_TYPE,
         VENDOR,
         PRODUCT,
         VERSION,
-        0,          # ff_effects_max->  not used so zeroed
+        0,  # ff_effects_max->  not used so zeroed
         *abs_vals,  # absmax -> for joysticks so zeroed
         *abs_vals,  # absmin -> for josysticks so zeroed
         *abs_vals,  # absfuzz -> for joysticks and worn sensors so zeroed
@@ -60,19 +61,19 @@ def destroy(uinput: BufferedWriter):
     fcntl.ioctl(uinput, UI_DEV_DESTROY)
 
 
-def make_keyboard(uinput: BufferedWriter):
+def make_keyboard(uinput: BufferedWriter, name: str):
     _make_support_keys(uinput)
-    _write_metadata(uinput)
+    _write_metadata(uinput, name)
     _create(uinput)
 
 
-def is_our_virtual_keyboard(path):
+def is_our_virtual_keyboard(path, name: str):
     event = os.path.basename(path)
     base = f"/sys/class/input/{event}/device"
 
     try:
         with open(f"{base}/name", "r") as f:
-            name = f.read().strip()
+            device_name = f.read().strip()
 
         with open(f"{base}/id/vendor") as f:
             vendor = int(f.read().strip(), 16)
@@ -82,8 +83,4 @@ def is_our_virtual_keyboard(path):
     except OSError:
         return False
 
-    return (
-        name == NAME
-        and vendor == VENDOR
-        and product == PRODUCT
-    )
+    return device_name == name and vendor == VENDOR and product == PRODUCT

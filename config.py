@@ -105,9 +105,6 @@ class Config:
             "max_notifications", DEFAULT_MAX_QT_NOTIFICATIONS
         )
 
-        # TODO: implement, logic in qt
-        self.show_duration_bar = qt_setting("show_duration", default=True)
-
         self.excluded_chords = filter_setting("excluded_chords")
         self.excluded_chords = [uncapitalize(c) for c in self.excluded_chords]
 
