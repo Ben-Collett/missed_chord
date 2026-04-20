@@ -11,8 +11,6 @@ from logger import log_warning
 from dataclasses import dataclass
 
 
-def remove_letter_and_filter(letter: str, words: list[str]):
-    return [word[1:] for word in words if len(word) > 0 and word[0] == letter]
 
 
 def captlized_and_uncaptlized(word: str):
@@ -44,11 +42,6 @@ def _handle_commands(prev_word, buffer, config):
             buffer.clear()
         else:
             log_warning("unknown command somehow", command)
-
-
-def clear_buffers(data: CharaLoopData):
-    data.buffer.clear()
-    data.backspace_queue.clear()
 
 
 def _process_event(event: MyKeyEvent, data: CharaLoopData):

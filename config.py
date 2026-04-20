@@ -105,6 +105,7 @@ class Config:
             "max_notifications", DEFAULT_MAX_QT_NOTIFICATIONS
         )
 
+        # TODO: implement, logic in qt
         self.show_duration_bar = qt_setting("show_duration", default=True)
 
         self.excluded_chords = filter_setting("excluded_chords")
@@ -119,7 +120,7 @@ class Config:
         mode = notification_setting("mode", "auto")
         self._update_notification_mode(mode)
 
-        self.notification_title = notification_setting(
+        self.notification_title:str = notification_setting(
             "title", DEFAULT_NOTIFICATION_TITLE
         )
         self.notification_message_template = notification_setting(
@@ -144,7 +145,7 @@ class Config:
             self.data, external_commands = load_chips()
 
         self.reversed = reverse_dict(self.data)
-        self.max_output_length = max(map(len, self.reversed.keys()))
+
         command_map = general_setting(
             "command_map", {"RL": ["reload_config"], "CB": ["clear_buffer"]}
         )

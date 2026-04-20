@@ -41,21 +41,6 @@ class MyKeyEvent:
         self.value: int = value
         self.modifiers = modifiers
 
-    @staticmethod
-    def parse_line(line: str) -> Self | None:
-        parts = line.strip().split()  # splits on any whitespace
-
-        if len(parts) < 2:
-            return None
-
-        name, value, *modifiers = parts
-
-        try:
-            value = int(value)
-        except Exception:
-            return None
-
-        return MyKeyEvent(name, value, modifiers)
 
 
 class TerminateEvent():

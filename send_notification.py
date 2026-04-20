@@ -1,7 +1,7 @@
 from utils import uncapitalize
-import subprocess
 from config import current_config
 from pathlib import Path
+from sudo_send import sudo_safe_send_notification
 
 missed_chords: dict[str, int] = {}
 
@@ -14,8 +14,8 @@ def display_message(chord: str, triggers: list[str]):
     if current_config.white_listed and chord_lower not in current_config.white_listed:
         return
 
-    title = current_config.notification_title
-    message = current_config.notification_message(triggers, chord)
+    title: str = current_config.notification_title
+    message: str = current_config.notification_message(triggers, chord)
 
     if message not in missed_chords:
         missed_chords[message] = 0
@@ -28,15 +28,8 @@ def display_message(chord: str, triggers: list[str]):
 
         bridge.notify.emit(title, message)
     else:
-        subprocess.run(
-            [
-                "notify-send",
-                "-t",
-                str(int(current_config.duration.milliseconds)),
-                title,
-                message,
-            ]
-        )
+        sudo_safe_send_notification(title, message,int(current_config.duration.milliseconds))
+
 
 
 def _print_map():

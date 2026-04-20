@@ -108,12 +108,6 @@ def load_chips():
     return out, commands
 
 
-def _printable_ascii_only_list(input: list[int]) -> bool:
-    for val in input:
-        if (val < 32 and val != 0) or val >= 127:
-            return False
-    return True
-
 
 # returns none if not printable str
 def _to_str(input: list[int]) -> str | None:
@@ -148,9 +142,3 @@ def ascii_only(data: dict) -> dict[frozenset[str], str]:
     return out
 
 
-def longest_number_of_words(input: list[str]):
-    max_length = 0
-    for text in input:
-        text = text.strip()
-        max_length = max(max_length, text.count(' '))
-    return max_length
