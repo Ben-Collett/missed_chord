@@ -1,7 +1,7 @@
 from utils import uncapitalize
 from config import current_config
 from pathlib import Path
-from sudo_send import sudo_safe_send_notification
+from sudo_send import sudo_safe_send_notification, sudo_safe_send_progress_notification
 
 missed_chords: dict[str, int] = {}
 
@@ -27,6 +27,8 @@ def display_message(chord: str, triggers: list[str]):
         from qt_bridge import bridge
 
         bridge.notify.emit(title, message)
+    elif current_config.notification_bar_update_frequency > 0 :
+        sudo_safe_send_progress_notification(title, message,int(current_config.duration.milliseconds), current_config.notification_bar_update_frequency)
     else:
         sudo_safe_send_notification(title, message,int(current_config.duration.milliseconds))
 

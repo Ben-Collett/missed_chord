@@ -86,6 +86,8 @@ class Config:
 
         def qt_setting(label, default):
             return get_setting("qt", label, default=default)
+        def experimental_setting(label, default):
+            return get_setting("experimental", label, default=default)
 
         def notification_setting(label, default):
             return get_setting("notification", label, default=default)
@@ -142,6 +144,7 @@ class Config:
             self.data, external_commands = load_chips()
 
         self.reversed = reverse_dict(self.data)
+        self.notification_bar_update_frequency = experimental_setting("notification_bar_update_frequency_ms",0)
 
         command_map = general_setting(
             "command_map", {"RL": ["reload_config"], "CB": ["clear_buffer"]}

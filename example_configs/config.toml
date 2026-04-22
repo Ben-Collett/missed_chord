@@ -39,3 +39,13 @@ window_height = 100  # defaults to 100
 log_to_stdout = false
 # log to a file will create file/parent dirs if needed, default = ""
 log_to_path = ""
+
+# these features are experimental and do not work the best in all enviomrents
+[experimental]
+# adds a duration bar to the notifications, when using notify-send, on linux
+# 0 = disabled, if you set the value to low like 1, then it will feel laggy, if you set it to high it will feel laggy.
+# I would recommend somewhere in the 20-50 ms range for most people if they use this setting
+#
+# WARNING: only really works well with dunst, and even then feels buggy
+# in swaync it works but the notification's orders change constantly
+notification_bar_update_frequency_ms = 0
