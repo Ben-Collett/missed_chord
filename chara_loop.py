@@ -69,7 +69,9 @@ def _process_event(event: MyKeyEvent, data: CharaLoopData):
     if event.is_backspace:
         data.just_backspaced = True
         ch = buffer.backspace()
-        backspace_queue.append(ch)
+        if ch is not None:
+            # lower makes it work if user presses shift while chording
+            backspace_queue.append(ch.lower())
         s = frozenset(backspace_queue)
         if s in chords:
             append_captlized_and_uncaptlized(possible_chords, chords[s])
