@@ -1,7 +1,7 @@
-import tomllib
 import os
 from duration import Duration, safe_get_duration
 from chording_modes import ChordingModes
+from load_config_map import parse
 from logger import log_warning
 from my_config_manager import config_manager
 from constants import FILE_NAME
@@ -27,7 +27,7 @@ def safe_get_map(m, *args, default=None):
     return m
 
 
-def get_config_path() -> Path:
+def get_config_path() -> Path | None:
     path = Path(FILE_NAME)
     if not path.is_file():
         path = config_manager.find_config_file(FILE_NAME)
@@ -36,12 +36,10 @@ def get_config_path() -> Path:
         return path
 
 
-def read_config(path: Path | None):
-    if not path:
+def read_config(path: Path | None) -> dict:
+    if not path or not path.exists():
         return {}
-    with open(path.absolute(), "rb") as f:
-        data = tomllib.load(f)
-        return data
+    return parse(path) or {}
 
 
 def is_on_wayland():
@@ -73,7 +71,8 @@ class Config:
             func()
 
     def notification_message(self, triggers, message):
-        out = self.notification_message_template.replace("$triggers", str(triggers))
+        out = self.notification_message_template.replace(
+            "$triggers", str(triggers))
         out = out.replace("$chord", message)
         return out
 
@@ -86,6 +85,7 @@ class Config:
 
         def qt_setting(label, default):
             return get_setting("qt", label, default=default)
+
         def experimental_setting(label, default):
             return get_setting("experimental", label, default=default)
 
@@ -101,7 +101,8 @@ class Config:
         duration_s = notification_setting("duration_seconds", None)
         duration_ms = notification_setting("duration_milliseconds", None)
 
-        self.duration = safe_get_duration(duration_ms, duration_s, DEFAULT_DURATION)
+        self.duration = safe_get_duration(
+            duration_ms, duration_s, DEFAULT_DURATION)
 
         self.max_qt_notifications = qt_setting(
             "max_notifications", DEFAULT_MAX_QT_NOTIFICATIONS
@@ -119,7 +120,7 @@ class Config:
         mode = notification_setting("mode", "auto")
         self._update_notification_mode(mode)
 
-        self.notification_title:str = notification_setting(
+        self.notification_title: str = notification_setting(
             "title", DEFAULT_NOTIFICATION_TITLE
         )
         self.notification_message_template = notification_setting(
@@ -128,7 +129,8 @@ class Config:
 
         self.window_width = qt_setting("window_width", DEFAULT_WINDOW_WIDTH)
         self.window_height = qt_setting("window_height", DEFAULT_WINDOW_HEIGHT)
-        self.duration_height = qt_setting("duration_height", DEFAULT_DURATION_HEIGHT)
+        self.duration_height = qt_setting(
+            "duration_height", DEFAULT_DURATION_HEIGHT)
         mode = general_setting("mode", "charachorder")
         try:
             self.mode = ChordingModes(mode)
@@ -144,7 +146,8 @@ class Config:
             self.data, external_commands = load_chips()
 
         self.reversed = reverse_dict(self.data)
-        self.notification_bar_update_frequency = experimental_setting("notification_bar_update_frequency_ms",0)
+        self.notification_bar_update_frequency = experimental_setting(
+            "notification_bar_update_frequency_ms", 0)
 
         command_map = general_setting(
             "command_map", {"RL": ["reload_config"], "CB": ["clear_buffer"]}
@@ -159,7 +162,8 @@ class Config:
                     command = Commands(command_str)
                     commands.append(command)
                 except ValueError:
-                    log_warning(f"invalid command name: {command_str}, skipping")
+                    log_warning(f"invalid command name: {
+                                command_str}, skipping")
             self.command_map[key] = commands
 
     def _update_notification_mode(self, mode: str):

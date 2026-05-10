@@ -1,13 +1,8 @@
-import json
-import tomllib
-import os
+from pathlib import Path
 from config_manager import ConfigManager
+from load_config_map import parse
 from my_config_manager import config_manager
 from commands import Commands
-
-
-def _file_exist(path):
-    return os.path.exists(path)
 
 
 def reverse_dict(d: dict):
@@ -49,19 +44,15 @@ def uncapitalize(s: str) -> str:
 
 def load_json() -> dict:
     FILE_NAME = "chords.json"
-    path = None
-    if _file_exist(FILE_NAME):
-        path = FILE_NAME
-    else:
-        tmp = config_manager.find_config_file(FILE_NAME)
-        if _file_exist(tmp):
-            path = tmp
+    path = Path(FILE_NAME)
+    if not path.exists():
+        path = config_manager.find_config_file(FILE_NAME)
 
-    if not path:
-        return {"chords": []}
+    empty_chords = {"chords": []}
+    if not path.exists():
+        return empty_chords
 
-    with open(path, "r") as file:
-        data = json.load(file)
+    data = parse(path, defaults=empty_chords) or empty_chords
 
     return data
 
@@ -70,23 +61,19 @@ def load_chips():
 
     FILE_NAME = "chips.toml"
 
-    path = None
-    if _file_exist(FILE_NAME):
-        path = FILE_NAME
-    else:
-        tmp = config_manager.find_config_file(FILE_NAME)
-        if _file_exist(tmp):
-            path = tmp
+    path = Path(FILE_NAME)
+    if not path.exists():
+        path = config_manager.find_config_file(FILE_NAME)
 
-    if not path:
+    if not path.exists():
         path = ConfigManager("fuzzy_chips").find_config_file("config.toml")
 
-    if not path:
+    if not path.exists():
         print("could not find any chips")
         return
 
-    with open(path, "rb") as file:
-        data = tomllib.load(file)
+    empty_chips = {"chips": {}}
+    data = parse(path, defaults=empty_chips) or empty_chips
 
     out = {}
     commands = {}
@@ -108,7 +95,6 @@ def load_chips():
     return out, commands
 
 
-
 # returns none if not printable str
 def _to_str(input: list[int]) -> str | None:
 
@@ -125,11 +111,12 @@ def _to_str(input: list[int]) -> str | None:
 
 
 def ascii_only(data: dict) -> dict[frozenset[str], str]:
+    # TODO: this should use a frozen dict not a set
     # format: key combinations are stored as a list of integers, with 0 to fix there length I think atleast for the input part
     # these are stored in a list with two elements the trigger followed by the output
     # these are then all stored in the list of chords
     chords: list[list[list[int]]] = data["chords"]
-    out: dict[str, str] = {}
+    out: dict[frozenset[str], str] = {}
     for pair in chords:
         trig = _to_str(pair[0])
         if not trig:
@@ -140,5 +127,3 @@ def ascii_only(data: dict) -> dict[frozenset[str], str]:
             continue
         out[frozenset(trig.lower())] = uncapitalize(output)
     return out
-
-
