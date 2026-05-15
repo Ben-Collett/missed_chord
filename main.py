@@ -1,22 +1,19 @@
 import sys
 import signal
-from config import current_config
 import queue
+from config_wrapper import ConfigWrapper
+from notification_modes import NotificationMode
 from my_key_event import MyKeyEvent, TERMINATE_EVENT
-import threading
 import keyboard
 
 
 def main():
+    config_wrapper = ConfigWrapper()
     keyboard.init(windows_synetic_mode=keyboard.WindowsSyntheticModes.REAL)
     key_queue = queue.Queue()
 
     def add_to_queue(event: keyboard.KeyboardEvent):
-        value = 0
-        if event.event_type == keyboard.KEY_DOWN:
-            value = 1
-        my_event = MyKeyEvent(event.name, value, event.modifiers)
-        key_queue.put_nowait(my_event)
+        key_queue.put_nowait(MyKeyEvent.from_keyboard_event(event))
 
     keyboard.hook(add_to_queue)
 
@@ -24,7 +21,7 @@ def main():
         key_queue.put_nowait(TERMINATE_EVENT)
         keyboard.unhook_all()
 
-    if current_config.qt_mode:
+    if config_wrapper.qt_mode():
 
         from PySide6 import QtWidgets, QtCore
         from qt_notification_manager import QTNotificationManager
@@ -37,7 +34,7 @@ def main():
         sigint_timer = QtCore.QTimer()
         sigint_timer.start(100)
         sigint_timer.timeout.connect(lambda: None)
-        worker = MainWorker(key_queue)
+        worker = MainWorker(key_queue, config_wrapper)
 
         def handle_sigint(sig, frame):
             kill_key_reader()
@@ -57,7 +54,7 @@ def main():
         from key_event_loop import key_loop
 
         try:
-            key_loop(key_queue)
+            key_loop(key_queue, config_wrapper)
         except KeyboardInterrupt:
             kill_key_reader()
 

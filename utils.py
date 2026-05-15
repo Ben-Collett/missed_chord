@@ -1,8 +1,9 @@
+import os
 from pathlib import Path
+import sys
 from config_manager import ConfigManager
 from load_config_map import parse
-from my_config_manager import config_manager
-from commands import Commands
+from commands import Command
 
 
 def reverse_dict(d: dict):
@@ -17,7 +18,7 @@ def reverse_dict(d: dict):
     return rev
 
 
-def inplace_merge_dicts(dict1: dict | None, dict2: dict | None) -> None:
+def flat_inplace_merge_dicts(dict1: dict | None, dict2: dict | None) -> None:
     """
     stores in dict1
     """
@@ -26,7 +27,8 @@ def inplace_merge_dicts(dict1: dict | None, dict2: dict | None) -> None:
         return
 
     for key, val in dict2.items():
-        dict1[key] = val
+        if key not in dict1:
+            dict1[key] = val
 
 
 def sets_to_string(sets: list[frozenset[str]]) -> list[str]:
@@ -42,7 +44,7 @@ def uncapitalize(s: str) -> str:
     return s[:1].lower() + s[1:]
 
 
-def load_json() -> dict:
+def load_json(config_manager: ConfigManager) -> dict:
     FILE_NAME = "chords.json"
     path = Path(FILE_NAME)
     if not path.exists():
@@ -57,7 +59,7 @@ def load_json() -> dict:
     return data
 
 
-def load_chips():
+def load_chips(config_manager: ConfigManager) -> tuple[dict, dict]:
 
     FILE_NAME = "chips.toml"
 
@@ -70,7 +72,7 @@ def load_chips():
 
     if not path.exists():
         print("could not find any chips")
-        return
+        return {}, {}
 
     empty_chips = {"chips": {}}
     data = parse(path, defaults=empty_chips) or empty_chips
@@ -83,12 +85,12 @@ def load_chips():
         if isinstance(val, str):
             out[frozenset(key)] = val
         elif isinstance(val, list):
-            current_commands: list[Commands] = []
+            current_commands: list[Command] = []
             for cmd in val:
                 if cmd == "restart" or cmd == "reload_config":
-                    current_commands.append(Commands.RELOAD)
+                    current_commands.append(Command.RELOAD)
                 elif cmd == "clear_buffer":
-                    current_commands.append(Commands.CLEAR_BUFFER)
+                    current_commands.append(Command.CLEAR_BUFFER)
             if len(current_commands) > 0:
                 commands[key] = current_commands
 
@@ -127,3 +129,23 @@ def ascii_only(data: dict) -> dict[frozenset[str], str]:
             continue
         out[frozenset(trig.lower())] = uncapitalize(output)
     return out
+
+
+def is_on_linux():
+    return sys.platform == "linux"
+
+
+def safe_expand_user(path: Path) -> Path:
+
+    if is_on_linux():
+        import pwd
+        expanded = str(path)
+        if expanded.startswith("~"):
+            if "SUDO_USER" in os.environ:
+                sudo_user = os.environ["SUDO_USER"]
+                user_home = pwd.getpwuid(pwd.getpwnam(sudo_user).pw_uid).pw_dir
+                expanded = expanded.replace("~", user_home, 1)
+            else:
+                expanded = os.path.expanduser(expanded)
+            return Path(expanded)
+    return path

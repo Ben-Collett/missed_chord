@@ -1,191 +1,191 @@
-import os
-from duration import Duration, safe_get_duration
-from chording_modes import ChordingModes
-from load_config_map import parse
-from logger import log_warning
-from my_config_manager import config_manager
-from constants import FILE_NAME
-from commands import Commands
-from pathlib import Path
+# auto generated
+import math
+from chording_modes import ChordingMode
+from duration import Duration
+from parse_command_section import parse_command_section
+from notification_modes import NotificationMode
 
-from utils import uncapitalize, load_json, ascii_only, load_chips, reverse_dict
-from utils import inplace_merge_dicts
-
-
-def safe_get_map(m, *args, default=None):
-    if len(args) == 0:
-        return default
-
-    for arg in args:
-        if m is not None and arg in m:
-            m = m[arg]
-        else:
-            return default
-
-    if m is None:
-        return default
-    return m
+class _ExpectedField:
+    def __init__(self, default_value=None, cftype=None):
+        self.default_value = default_value
+        self.cftype = cftype
 
 
-def get_config_path() -> Path | None:
-    path = Path(FILE_NAME)
-    if not path.is_file():
-        path = config_manager.find_config_file(FILE_NAME)
-
-    if path and path.is_file():
-        return path
-
-
-def read_config(path: Path | None) -> dict:
-    if not path or not path.exists():
-        return {}
-    return parse(path) or {}
+class _ExpectedList:
+    def __init__(self, default_value=None, cftype=None, min_length=0, max_length=math.inf):
+        default_value = default_value or []
+        self.default_value = default_value
+        self.cftype = cftype
+        self.min_length = min_length
+        self.max_length = max_length
 
 
-def is_on_wayland():
-    return os.environ.get("WAYLAND_DISPLAY") is not None
+class _ExpectedDict:
+    def __init__(self, default_value=None, key_type=None, value_type=None, min_length=0, max_length=math.inf):
+        default_value = default_value or {}
+        self.default_value = default_value
+        self.key_type = key_type
+        self.cftype = value_type
+        self.min_length = min_length
+        self.max_length = max_length
 
+def _check_type(value, expected_type) -> bool:
+    if expected_type is None:
+        return True
+    if expected_type == bool:
+        return isinstance(value, bool)
+    if expected_type == int:
+        return isinstance(value, int) and not isinstance(value, bool)
+    if expected_type == str:
+        return isinstance(value, str)
+    if expected_type == float:
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
+    if expected_type == list:
+        return isinstance(value, list)
+    if expected_type == dict:
+        return isinstance(value, dict)
+    return isinstance(value, expected_type)
 
-DEFAULT_MAX_QT_NOTIFICATIONS = 3
-# if <0 then there is no maximum
-max_qt_notifications = DEFAULT_MAX_QT_NOTIFICATIONS
+def _merge_expected(config_map: dict, expected_map: dict, ignored_sections=set(), ignored_keys=set()) -> dict:
+    result = {}
 
-DEFAULT_DURATION = Duration(seconds=4)
-DEFAULT_NOTIFICATION_TITLE = "possible missed chord"
-DEFAULT_NOTIFICATION_MESSAGE = "$triggers = $chord"
-DEFAULT_WINDOW_WIDTH = 400
-DEFAULT_WINDOW_HEIGHT = 100
-DEFAULT_DURATION_HEIGHT = 4
+    for section_name, section_expected in expected_map.items():
+        result[section_name] = {}
+        for field_name, field_expected in section_expected.items():
+            result[section_name][field_name] = field_expected.default_value
 
+    for section_name, section_config in config_map.items():
+        if section_name not in expected_map:
+            if section_name in ignored_sections:
+                result[section_name] = section_config.copy()
+            else:
+                print(f"Unused section: {section_name}")
+            continue
+
+        if not isinstance(section_config, dict):
+            print(f"Type error in section '{section_name}': expected dict, got {type(section_config).__name__}")
+            continue
+
+        for field_name, field_value in section_config.items():
+            if field_name not in expected_map[section_name]:
+                if field_name in ignored_keys or section_name in ignored_sections:
+                    result[section_name][field_name] = field_value
+                else:
+                    print(f"Unused field: {section_name}.{field_name}")
+                continue
+
+            field_expected = expected_map[section_name][field_name]
+
+            if isinstance(field_expected, _ExpectedField):
+                if _check_type(field_value, field_expected.cftype):
+                    result[section_name][field_name] = field_value
+                else:
+                    print(f"Type error: {section_name}.{field_name} expected {field_expected.cftype}, got {type(field_value).__name__}")
+
+            elif isinstance(field_expected, _ExpectedList):
+                if not isinstance(field_value, list):
+                    print(f"Type error: {section_name}.{field_name} expected list, got {type(field_value).__name__}")
+                elif field_expected.cftype and not all(_check_type(v, field_expected.cftype) for v in field_value):
+                    print(f"Type error: {section_name}.{field_name} expected list of {field_expected.cftype}")
+                elif not (field_expected.min_length <= len(field_value) <= field_expected.max_length):
+                    print(f"Length error: {section_name}.{field_name} length {len(field_value)} not in range [{field_expected.min_length}, {field_expected.max_length}]")
+                else:
+                    result[section_name][field_name] = field_value
+
+            elif isinstance(field_expected, _ExpectedDict):
+                if not isinstance(field_value, dict):
+                    print(f"Type error: {section_name}.{field_name} expected dict, got {type(field_value).__name__}")
+                elif field_expected.key_type and not all(_check_type(k, field_expected.key_type) for k in field_value.keys()):
+                    print(f"Type error: {section_name}.{field_name} expected dict with keys of {field_expected.key_type}")
+                elif field_expected.cftype and not all(_check_type(v, field_expected.cftype) for v in field_value.values()):
+                    print(f"Type error: {section_name}.{field_name} expected dict with values of {field_expected.cftype}")
+                elif not (field_expected.min_length <= len(field_value) <= field_expected.max_length):
+                    print(f"Length error: {section_name}.{field_name} length {len(field_value)} not in range [{field_expected.min_length}, {field_expected.max_length}]")
+                else:
+                    result[section_name][field_name] = field_value
+
+    return result
+
+def _get_expected_map():
+    return {"general": {"mode": _ExpectedField("charachorder", str)}, "notification": {"mode": _ExpectedField("auto", str), "title": _ExpectedField("possible missed chord", str), "message": _ExpectedField("$triggers = $chord", str), "duration": _ExpectedField(None)}, "filter": {"blocked": _ExpectedList([], str), "allowed": _ExpectedList([], str)}, "qt": {"duration_height": _ExpectedField(8, int), "max_notifications": _ExpectedField(3, int), "notification_width": _ExpectedField(400, int), "notification_height": _ExpectedField(100, int)}, "logging": {"log_to_stdout": _ExpectedField(False, bool), "log_to_path": _ExpectedField("", str)}, "experimental": {"notification_bar_update_frequency": _ExpectedField(None)}}
 
 class Config:
-    def __init__(self, config_map={}):
-        self.update_config(config_map)
-        self.on_reload = []
-
-    def reload(self):
-        path = get_config_path()
-        print(f"reloading config: {path}")
-        self.update_config(read_config(path))
-        for func in self.on_reload:
-            func()
-
-    def notification_message(self, triggers, message):
-        out = self.notification_message_template.replace(
-            "$triggers", str(triggers))
-        out = out.replace("$chord", message)
-        return out
-
-    def update_config(self, config_map):
-        def get_setting(*args, default=None):
-            return safe_get_map(config_map, *args, default=default)
-
-        def general_setting(label, default):
-            return get_setting("general", label, default=default)
-
-        def qt_setting(label, default):
-            return get_setting("qt", label, default=default)
-
-        def experimental_setting(label, default):
-            return get_setting("experimental", label, default=default)
-
-        def notification_setting(label, default):
-            return get_setting("notification", label, default=default)
-
-        def filter_setting(label, default=[]):
-            return get_setting("filter", label, default=default)
-
-        def logging_setting(label, default=None):
-            return get_setting("logging", label, default=default)
-
-        duration_s = notification_setting("duration_seconds", None)
-        duration_ms = notification_setting("duration_milliseconds", None)
-
-        self.duration = safe_get_duration(
-            duration_ms, duration_s, DEFAULT_DURATION)
-
-        self.max_qt_notifications = qt_setting(
-            "max_notifications", DEFAULT_MAX_QT_NOTIFICATIONS
+    def __init__(self, config_map: dict | None = None):
+        if not config_map:
+            config_map = {}
+        merged = _merge_expected(
+            config_map, _get_expected_map()
+            , ignored_sections={'commands'}
         )
+        self.general = GeneralSection(merged["general"])
+        self.notification = NotificationSection(merged["notification"])
+        self.filter = FilterSection(merged["filter"])
+        self.qt = QtSection(merged["qt"])
+        self.logging = LoggingSection(merged["logging"])
+        self.experimental = ExperimentalSection(merged["experimental"])
+        self.commands = parse_command_section(merged)
 
-        self.excluded_chords = filter_setting("excluded_chords")
-        self.excluded_chords = [uncapitalize(c) for c in self.excluded_chords]
-
-        self.white_listed = filter_setting("white_listed")
-        self.white_listed = [uncapitalize(c) for c in self.white_listed]
-
-        self.log_to_stdout = logging_setting("log_to_stdout", False)
-        self.log_to_path = logging_setting("log_to_path", "")
-
-        mode = notification_setting("mode", "auto")
-        self._update_notification_mode(mode)
-
-        self.notification_title: str = notification_setting(
-            "title", DEFAULT_NOTIFICATION_TITLE
+    def update(self, config_map: dict | None = None):
+        if not config_map:
+            config_map = {}
+        merged = _merge_expected(
+            config_map, _get_expected_map()
+            , ignored_sections={'commands'}
         )
-        self.notification_message_template = notification_setting(
-            "message", DEFAULT_NOTIFICATION_MESSAGE
-        )
+        self.general.update(merged["general"])
+        self.notification.update(merged["notification"])
+        self.filter.update(merged["filter"])
+        self.qt.update(merged["qt"])
+        self.logging.update(merged["logging"])
+        self.experimental.update(merged["experimental"])
+        self.commands = parse_command_section(merged)
 
-        self.window_width = qt_setting("window_width", DEFAULT_WINDOW_WIDTH)
-        self.window_height = qt_setting("window_height", DEFAULT_WINDOW_HEIGHT)
-        self.duration_height = qt_setting(
-            "duration_height", DEFAULT_DURATION_HEIGHT)
-        mode = general_setting("mode", "charachorder")
-        try:
-            self.mode = ChordingModes(mode)
-        except ValueError:
-            log_warning("invalid mode, defaulting to charachorder")
-            self.mode = ChordingModes.CHARA_CHORDER
+class GeneralSection:
+    def __init__(self, smap: dict):
+        self.update(smap)
 
-        self.command_map = {}
-        external_commands: dict[str, list[Commands]] | None = None
-        if self.mode == ChordingModes.CHARA_CHORDER:
-            self.data = ascii_only(load_json())
-        else:
-            self.data, external_commands = load_chips()
+    def update(self, smap: dict):
+        self.mode: ChordingMode = ChordingMode.parse(smap["mode"])
 
-        self.reversed = reverse_dict(self.data)
-        self.notification_bar_update_frequency = experimental_setting(
-            "notification_bar_update_frequency_ms", 0)
+class NotificationSection:
+    def __init__(self, smap: dict):
+        self.update(smap)
 
-        command_map = general_setting(
-            "command_map", {"RL": ["reload_config"], "CB": ["clear_buffer"]}
-        )
+    def update(self, smap: dict):
+        self.mode: NotificationMode = NotificationMode.parse(smap["mode"])
+        self.title: str = smap["title"]
+        self.message: str = smap["message"]
+        self.duration: Duration = Duration.parse(smap["duration"], Duration(3000))
 
-        inplace_merge_dicts(self.command_map, external_commands)
+class FilterSection:
+    def __init__(self, smap: dict):
+        self.update(smap)
 
-        for key, val in command_map.items():
-            commands = []
-            for command_str in val:
-                try:
-                    command = Commands(command_str)
-                    commands.append(command)
-                except ValueError:
-                    log_warning(f"invalid command name: {
-                                command_str}, skipping")
-            self.command_map[key] = commands
+    def update(self, smap: dict):
+        self.blocked: list[str] = smap["blocked"]
+        self.allowed: list[str] = smap["allowed"]
 
-    def _update_notification_mode(self, mode: str):
-        if mode == "qt":
-            self.qt_mode = True
-        elif mode == "notify":
-            self.qt_mode = False
-        elif mode == "auto":
-            self.qt_mode = not is_on_wayland()
-        else:
-            log_warning("invalid mode selected, defaulting to auto")
-            self.qt_mode = not is_on_wayland()
+class QtSection:
+    def __init__(self, smap: dict):
+        self.update(smap)
 
-    def __str__(self):
-        lines = "\n".join(f"  {k}: {v!r}" for k, v in vars(self).items())
-        return f"{self.__class__.__name__} {{\n{lines}\n}}"
+    def update(self, smap: dict):
+        self.duration_height: int = smap["duration_height"]
+        self.max_notifications: int = smap["max_notifications"]
+        self.notification_width: int = smap["notification_width"]
+        self.notification_height: int = smap["notification_height"]
 
+class LoggingSection:
+    def __init__(self, smap: dict):
+        self.update(smap)
 
-path = get_config_path()
-print(f"loading config: {path}")
-current_config = Config(read_config(path))
+    def update(self, smap: dict):
+        self.log_to_stdout: bool = smap["log_to_stdout"]
+        self.log_to_path: str = smap["log_to_path"]
 
-if __name__ == "__main__":
-    print(get_config_path())
-    print(current_config)
+class ExperimentalSection:
+    def __init__(self, smap: dict):
+        self.update(smap)
+
+    def update(self, smap: dict):
+        self.notification_bar_update_frequency: Duration = Duration.parse(smap["notification_bar_update_frequency"], Duration(0))

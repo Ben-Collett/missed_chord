@@ -1,8 +1,17 @@
-from typing import Self
 from typing import Optional
+import keyboard
+from keyboard._keyboard_event import KeyboardEvent
 
 
 class MyKeyEvent:
+    @staticmethod
+    def from_keyboard_event(event: KeyboardEvent) -> "MyKeyEvent":
+        value = 0
+        if event.event_type == keyboard.KEY_DOWN:
+            value = 1
+
+        return MyKeyEvent(event.name, value, event.modifiers)
+
     def to_utf(self, shift_down: bool) -> Optional[str]:
         name = self.name
 
@@ -40,7 +49,6 @@ class MyKeyEvent:
         self.name: str = name
         self.value: int = value
         self.modifiers = modifiers
-
 
 
 class TerminateEvent():

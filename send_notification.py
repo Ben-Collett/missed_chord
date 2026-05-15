@@ -1,58 +1,63 @@
-from utils import uncapitalize
-from config import current_config
+from config_wrapper import ConfigWrapper
+from qt_notification_data import QtNotificationData
+from utils import uncapitalize, safe_expand_user
 from pathlib import Path
 from sudo_send import sudo_safe_send_notification, sudo_safe_send_progress_notification
 
 missed_chords: dict[str, int] = {}
 
 
-def display_message(chord: str, triggers: list[str]):
+def display_message(chord: str, triggers: list[str], config_wrapper: ConfigWrapper):
     chord_lower = uncapitalize(chord)
-    if chord_lower in current_config.excluded_chords:
+    config = config_wrapper.config
+
+    if config_wrapper.filtered(chord_lower):
         return
 
-    if current_config.white_listed and chord_lower not in current_config.white_listed:
-        return
-
-    title: str = current_config.notification_title
-    message: str = current_config.notification_message(triggers, chord)
+    title: str = config.notification.title
+    message: str = config_wrapper.make_message(triggers, chord)
 
     if message not in missed_chords:
         missed_chords[message] = 0
     missed_chords[message] += 1
-    _print_map()
-    _write_log_to_file()
+    should_print = config.logging.log_to_stdout
+    should_write_to_file = config.logging.log_to_path != ""
+    if should_print or should_write_to_file:
+        sorted_chords = sorted(missed_chords.items(),
+                               key=lambda x: x[1], reverse=True)
+        if should_print:
+            _print_map(sorted_chords)
 
-    if current_config.qt_mode:
+        if should_write_to_file:
+            _write_log_to_file(sorted_chords, config.logging.log_to_path)
+
+    notification_duration = config.notification.duration.milliseconds
+    update_frequency = config.experimental.notification_bar_update_frequency.milliseconds
+    if config_wrapper.qt_mode():
         from qt_bridge import bridge
-
-        bridge.notify.emit(title, message)
-    elif current_config.notification_bar_update_frequency > 0 :
-        sudo_safe_send_progress_notification(title, message,int(current_config.duration.milliseconds), current_config.notification_bar_update_frequency)
+        qt = config.qt
+        max_notifications = qt.max_notifications
+        data = QtNotificationData(title=title, content=message, duration_ms=notification_duration,
+                                  width=qt.notification_width, height=qt.notification_height, duration_height=qt.duration_height)
+        bridge.notify.emit(data, max_notifications)
+    elif update_frequency > 0:
+        sudo_safe_send_progress_notification(
+            title, message, notification_duration, update_frequency)
     else:
-        sudo_safe_send_notification(title, message,int(current_config.duration.milliseconds))
+        sudo_safe_send_notification(title, message, notification_duration)
 
 
-
-def _print_map():
-    sorted_chords = sorted(missed_chords.items(),
-                           key=lambda x: x[1], reverse=True)
+def _print_map(sorted_chords):
     for k, v in sorted_chords:
-        if current_config.log_to_stdout:
-            print(k, v)
-    if current_config.log_to_stdout:
-        print("-------------------------------")
+        print(k, v)
+    print("-------------------------------")
 
 
-def _write_log_to_file():
-    if not current_config.log_to_path:
-        return
+def _write_log_to_file(sorted_chords, path: str):
 
-    log_path = Path(current_config.log_to_path).expanduser()
+    log_path = safe_expand_user(Path(path))
 
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    sorted_chords = sorted(missed_chords.items(),
-                           key=lambda x: x[1], reverse=True)
     lines = [f"{k} {v}" for k, v in sorted_chords]
     log_path.write_text("\n".join(lines) + "\n")

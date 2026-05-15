@@ -1,18 +1,6 @@
-from config import current_config
-import sys
+from qt_notification_data import QtNotificationData
 from PySide6 import QtCore, QtWidgets
-
-
-def window_width():
-    return current_config.window_width
-
-
-def window_height():
-    return current_config.window_height
-
-
-def duration_height():
-    return current_config.duration_height
+from typing import Callable
 
 
 PADDING = 15
@@ -23,14 +11,12 @@ TICK_MS = 30
 class QtNotification(QtWidgets.QWidget):
     def __init__(
         self,
-        title: str,
-        content: str,
-        on_close: callable = lambda w: None,
-        duration_ms: int | None = None,   # NEW
+        data: QtNotificationData,
+        on_close: Callable = lambda _: None,
     ):
         super().__init__()
         self.on_close = on_close
-        self.duration_ms = duration_ms
+        self.data = data
         self.elapsed_ms = 0
 
         # Translucent background
@@ -46,7 +32,7 @@ class QtNotification(QtWidgets.QWidget):
         # ---------------- CONTAINER ----------------
         self.container = QtWidgets.QWidget(self)
         self.container.setObjectName("container")
-        self.container.setGeometry(0, 0, window_width(), window_height())
+        self.container.setGeometry(0, 0, data.width, data.height)
 
         self.container.setStyleSheet("""
             #container {
@@ -79,13 +65,14 @@ class QtNotification(QtWidgets.QWidget):
         """)
 
         # ---------------- TITLE ----------------
-        self.title_label = QtWidgets.QLabel(title, self.container)
+        self.title_label = QtWidgets.QLabel(self.data.title, self.container)
         self.title_label.setStyleSheet(
             "font-size: 24px; font-weight: bold; color:white;"
         )
 
         # ---------------- CONTENT ----------------
-        self.content_label = QtWidgets.QLabel(content, self.container)
+        self.content_label = QtWidgets.QLabel(
+            self.data.content, self.container)
         self.content_label.setStyleSheet(
             "font-size: 18px;color:white;"
         )
@@ -103,7 +90,7 @@ class QtNotification(QtWidgets.QWidget):
 
         # ---------------- TIMER ----------------
         self.timer = None
-        if self.duration_ms and self.duration_ms > 0:
+        if data.duration_ms > 0:
             self.timer = QtCore.QTimer(self)
             self.timer.timeout.connect(self._on_tick)
             self.timer.start(TICK_MS)
@@ -111,9 +98,9 @@ class QtNotification(QtWidgets.QWidget):
     # ---------------- TIMER LOGIC ----------------
     def _on_tick(self):
         self.elapsed_ms += TICK_MS
-        remaining = max(0, self.duration_ms - self.elapsed_ms)
+        remaining = max(0, self.data.duration_ms - self.elapsed_ms)
 
-        progress = int((remaining / self.duration_ms) * 1000)
+        progress = int((remaining / self.data.duration_ms) * 1000)
         self.progress.setValue(progress)
 
         if remaining <= 0:
@@ -124,7 +111,7 @@ class QtNotification(QtWidgets.QWidget):
         if self.timer:
             self.timer.stop()
         self.on_close(self)
-        super().close()
+        return super().close()
 
     # ---------------- LAYOUT ----------------
     def resizeEvent(self, event):
@@ -153,9 +140,9 @@ class QtNotification(QtWidgets.QWidget):
 
         self.progress.setGeometry(
             PADDING,
-            self.height() - duration_height() - 6,
+            self.height() - self.data.duration_height - 6,
             self.width() - 2 * PADDING,
-            duration_height()
+            self.data.duration_height
         )
 
         super().resizeEvent(event)
@@ -166,34 +153,10 @@ class QtNotification(QtWidgets.QWidget):
         geometry = screen.availableGeometry()
 
         margin = 2
-        width = window_width()
-        height = window_height()
+        width = self.data.width
+        height = self.data.height
         x = geometry.right() - width - margin
         top = geometry.top()
         y = top + margin + number_before * (height + WINDOW_GAP)
 
         self.move(x, y)
-
-
-if __name__ == "__main__":
-    app = QtWidgets.QApplication([])
-
-    w1 = QtNotification(
-        "possible missed chord",
-        "[th, t`] = than",
-        duration_ms=4000
-    )
-    w1.resize(window_width(), window_height())
-    w1.update_position(0)
-    w1.show()
-
-    w2 = QtNotification(
-        "possible missed chord",
-        "[to] = to",
-        duration_ms=7000
-    )
-    w2.resize(window_width(), window_height())
-    w2.update_position(1)
-    w2.show()
-
-    sys.exit(app.exec())

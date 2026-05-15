@@ -1,15 +1,15 @@
-from config import current_config
+from config_wrapper import ConfigWrapper
 from my_key_event import TERMINATE_EVENT
 from buffer import RingBuffer
 import send_notification
 from logger import log_warning
 from queue import Queue
 from my_key_event import MyKeyEvent
-from commands import Commands
+from commands import Command
 from modifier_utils import DownMods
 
 
-def chip_key_loop(key_queue: Queue):
+def chip_key_loop(key_queue: Queue, config_wrapper: ConfigWrapper):
 
     buffer = RingBuffer(200)
     expected_string = []
@@ -22,8 +22,8 @@ def chip_key_loop(key_queue: Queue):
         shift_down = down_modes.shift_down
         meta_down = down_modes.meta_down
 
-        chips = current_config.data
-        reversed_chips = current_config.reversed
+        chips = config_wrapper.data
+        reversed_chips = config_wrapper.reversed_data
         ch = None
         if value == 1:
             if name == "space":
@@ -83,18 +83,20 @@ def chip_key_loop(key_queue: Queue):
                 inputs_list: list[str] = []
                 for input in inputs:
                     inputs_list.append(''.join(input))
-                send_notification.display_message(prev_word, inputs_list)
+                send_notification.display_message(
+                    prev_word, inputs_list, config_wrapper)
 
         if ch:
             if len(expected_string) > 0:
                 expected_string.pop(0)
             buffer.add(ch)
-        if name == "space" and buffer.get_trailing_white_space() == " " and prev_word in current_config.command_map:
-            commands = current_config.command_map[prev_word]
+
+        if name == "space" and buffer.get_trailing_white_space() == " ":
+            commands = config_wrapper.get_commands(prev_word)
             for command in commands:
-                if command == Commands.RELOAD:
-                    current_config.reload()
-                elif command == Commands.CLEAR_BUFFER:
+                if command == Command.RELOAD:
+                    config_wrapper.reload(log=True)
+                elif command == Command.CLEAR_BUFFER:
                     buffer.clear()
                 else:
                     log_warning("unknown command somehow", command)

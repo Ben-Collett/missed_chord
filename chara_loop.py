@@ -1,16 +1,14 @@
+from config_wrapper import ConfigWrapper
 import utils
 from my_key_event import TERMINATE_EVENT, MyKeyEvent
-from config import current_config
 from collections import deque
 import send_notification
 from queue import Queue
 from buffer import RingBuffer
-from commands import Commands
+from commands import Command
 from modifier_utils import DownMods
 from logger import log_warning
 from dataclasses import dataclass
-
-
 
 
 def captlized_and_uncaptlized(word: str):
@@ -34,17 +32,17 @@ class CharaLoopData:
     just_backspaced: bool = False
 
 
-def _handle_commands(prev_word, buffer, config):
-    for command in config.command_map[prev_word]:
-        if command == Commands.RELOAD:
-            current_config.reload()
-        elif command == Commands.CLEAR_BUFFER:
+def _handle_commands(prev_word, buffer, config_wrapper: ConfigWrapper):
+    for command in config_wrapper.get_commands(prev_word):
+        if command == Command.RELOAD:
+            config_wrapper.reload(log=True)
+        elif command == Command.CLEAR_BUFFER:
             buffer.clear()
         else:
             log_warning("unknown command somehow", command)
 
 
-def _process_event(event: MyKeyEvent, data: CharaLoopData):
+def _process_event(event: MyKeyEvent, data: CharaLoopData, config_wrapper: ConfigWrapper):
     buffer = data.buffer
     backspace_queue = data.backspace_queue
     possible_chords = data.possible_chords
@@ -54,8 +52,8 @@ def _process_event(event: MyKeyEvent, data: CharaLoopData):
     shift_down = down_mods.shift_down
     is_arrow = event.is_arrow
 
-    chords = current_config.data
-    reversed_chords = current_config.reversed
+    chords = config_wrapper.data
+    reversed_chords = config_wrapper.reversed_data
 
     if meta_down or is_arrow:
         buffer.clear()
@@ -94,11 +92,12 @@ def _process_event(event: MyKeyEvent, data: CharaLoopData):
         elif prev_uncap in reversed_chords.keys():
             inputs = reversed_chords[prev_uncap]
 
-        if prev_word in current_config.command_map.keys():
-            _handle_commands(prev_word, buffer, current_config)
+        if config_wrapper.has_command(prev_word):
+            _handle_commands(prev_word, buffer, config_wrapper)
         elif inputs and prev_word not in possible_chords:
             options = utils.sets_to_string(inputs)
-            send_notification.display_message(prev_word, options)
+            send_notification.display_message(
+                prev_word, options, config_wrapper)
             possible_chords.clear()
 
     # I need to check length in case the user backspaced while the buffer was empty
@@ -117,13 +116,11 @@ def _process_event(event: MyKeyEvent, data: CharaLoopData):
     data.just_backspaced = False
 
 
-def _process_event_wrapper(event: MyKeyEvent, data: CharaLoopData):
-    _process_event(event, data)
-    # print(data.buffer)
-    # print(data.possible_chords)
+def _process_event_wrapper(event: MyKeyEvent, data: CharaLoopData, config_wrapper: ConfigWrapper):
+    _process_event(event, data, config_wrapper)
 
 
-def chara_key_loop(key_queue: Queue):
+def chara_key_loop(key_queue: Queue, config_wrapper: ConfigWrapper):
 
     buffer = RingBuffer(100)
     backspace_queue = deque()
@@ -138,4 +135,4 @@ def chara_key_loop(key_queue: Queue):
         event = key_queue.get()
         if event == TERMINATE_EVENT:
             break
-        _process_event_wrapper(event, data)
+        _process_event_wrapper(event, data, config_wrapper)

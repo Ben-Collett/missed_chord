@@ -3,49 +3,63 @@
 # used to set between "charachorder" mode and "fuzzy chips", later will support different chording methods in charachroder,defaults to charachorder
 # if using charachorder mode will parse chords.json file to get chords
 # if in "fuzzy chips" mode will parse chips.toml which should be your entire fuzzy chips config
-mode = "fuzzy chips"
-# if the internal buffer ends with one of the keys as a word it will execute the command.
-# most users can ignore the clear buffer command but may want to set up a reoload config command
-# in this case if you type "<space>RL<space>" it will reaload the config in most situations
-command_map = { "RL" = ["reload_config"], "CB" = ["clear_buffer"] }
+mode = "charachorder"
 
 [notification]
+# there are three values for notification mode: qt, notify, auto
+# notify uses the notify-send command to send a notification and only works on linux, it
+# qt creates notifications using qt windows, requires pyside6 to be installed
+# auto selects the notification mode automatically, notify on linux, qt on other platforms
+mode = "auto"
 title = "possible missed chord"
-message = "$triggers = $chord, baka"
-mode = "auto"  # auto, notify,qt, auto is the default and recommended, the only reason to change this is you might want to use notify mode if you are using an x11 tilling window  manger
-# only one of the duration fields should be present, if both are present the milliseconds will override the seconds, defaults to 4 seconds
-# duration_milliseconds = 4000
-duration_seconds = 6
+message = "$triggers = $chord"
+# duration can be specified as a integer in milliseconds or a string
+# if you use a string you can append a s to use seconds instead
+# if in seconds then it will be converted to the closes integer milliseconds by the program using bankers rounding
+# ex: duration = "3s", duration = 3000, duration = "3.0s", duration = "3000ms" are all equal
+duration = 3000
 
-# filters when a missed chord/chip notification should send.
-# based on the output of chords/chips not the triggers
 [filter]
-excluded_chords = ["have", "I"]
-# white_listed chords: if not empty, only chords in this list will be shown (all others filtered out)
-# if a string is in both excluded and white_listed for some reason it will be filtered out
-# leave empty or commented out to disable this filter
-white_listed = []
+# the filter has two options blocked and allowed
+# they filter the output chord/chip
+# they're both list of strings
+# the blocked list blocks any chords in it
+# the allowed list allows only strings that are in it to be displayed
+# if the allowed list is empty then any string that is not in the blocked list is allowed
+# if something is in both in the blocked and allowed list then it will be blocked
+# ex: blocked = ["I","have"]
+blocked = []
+allowed = []
 
-# qt notification specific settings
+# settings that only apply to notifications created in qt mode
 [qt]
-duration_height = 8  # height of duration bar set to 0 to hide, default = 8
-max_notifications = 4  # if <= 0 then unlimited, defaults to three
-window_width = 400  # defaults to 400
-window_height = 100  # defaults to 100
+duration_height = 8
+# max_notifications is the max number of qt windows that will displayed if there are more notifications the older ones will be close. If <= 0 then unlimited
+max_notifications = 3
+notification_width = 400
+notification_height = 100
 
-# logging config
 [logging]
 # log missed chords to stdout (sorted by frequency), default = false
 log_to_stdout = false
 # log to a file will create file/parent dirs if needed, default = ""
 log_to_path = ""
 
-# these features are experimental and do not work the best in all enviomrents
+# these features are experimental and do not work the best in all environments
 [experimental]
 # adds a duration bar to the notifications, when using notify-send, on linux
+# uses the same rules for setting it as the notification.duration field
 # 0 = disabled, if you set the value to low like 1, then it will feel laggy, if you set it to high it will feel laggy.
 # I would recommend somewhere in the 20-50 ms range for most people if they use this setting
 #
 # WARNING: only really works well with dunst, and even then feels buggy
 # in swaync it works but the notification's orders change constantly
-notification_bar_update_frequency_ms = 0
+notification_bar_update_frequency = 0
+
+# if the internal buffer ends with one of the keys as a word it will execute the command.
+# most users can ignore the clear buffer command but may want to set up a reload config command
+# in this case if you type "<space>RL<space>" it will reload the config in most situations
+[commands]
+RL = ["reload_config"]
+CB = ["clear_buffer"]
+

@@ -1,38 +1,49 @@
+from dataclasses import dataclass
+from logger import log_warning
+
+
+@dataclass
 class Duration:
-    __slots__ = ("_seconds",)
-
-    def __init__(self, *, seconds: float | None = None, milliseconds: float | None = None):
-        if seconds is None and milliseconds is None:
-            raise ValueError("Provide either seconds or milliseconds")
-
-        if seconds is not None and milliseconds is not None:
-            raise ValueError("Provide only one of seconds or milliseconds")
-
-        if seconds is not None:
-            self._seconds = float(seconds)
-        else:
-            self._seconds = float(milliseconds) / 1000.0
+    milliseconds: int
 
     @property
     def seconds(self) -> float:
-        return self._seconds
+        return self.milliseconds/1000
 
-    @property
-    def milliseconds(self) -> float:
-        return self._seconds * 1000.0
+    @staticmethod
+    def parse(duration, fallback: "Duration") -> "Duration":
+        """
+        if an int is passed in it is assumed to be in seconds
+        if a str is passed in it is assumed milliseconds unless it ends with a s or S and not ms or MS or Ms or mS
+        if a value can't be parsed from the string the fallback duration is used
+        and a warning is logged
 
-    def __float__(self) -> float:
-        """Allows: time.sleep(Duration(...))"""
-        return self._seconds
+        the duration string can be a decimal it will be rounded to the nearest integer milliseconds
+        using bankers rounding
 
-    def __repr__(self) -> str:
-        return f"Duration(seconds={self._seconds})"
+        """
 
+        if duration is None:
+            return fallback
 
-def safe_get_duration(duration_ms, duration_s, default):
-    if duration_ms:
-        return Duration(milliseconds=duration_ms)
-    elif duration_s:
-        return Duration(seconds=duration_s)
-    else:
-        return default
+        if not isinstance(duration, str) and not isinstance(duration, int) and not isinstance(duration, float):
+            log_warning(f"{duration} is not accepted type str,int,float type is {
+                        type(duration)}")
+            return fallback
+        duration = str(duration)
+
+        original_duration = duration
+        duration = duration.lower()
+        multiplier = 1
+        if duration.endswith("ms"):
+            duration = duration.removesuffix("ms")
+        elif duration.endswith("s"):
+            duration = duration.removesuffix("s")
+            multiplier = 1000
+
+        try:
+            return Duration(round(float(duration) * multiplier))
+        except ValueError:
+            log_warning(f"couldn't parse duration {
+                original_duration}, falling back to {fallback}")
+            return fallback

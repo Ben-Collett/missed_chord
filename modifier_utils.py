@@ -1,6 +1,5 @@
 from my_key_event import MyKeyEvent
 from dataclasses import dataclass
-from typing import Self
 
 
 @dataclass
@@ -21,7 +20,7 @@ class DownMods:
             self.meta_down = True
 
     @staticmethod
-    def from_event(event: MyKeyEvent) -> Self:
+    def from_event(event: MyKeyEvent) -> "DownMods":
 
         out = DownMods()
         if event.is_down_event:

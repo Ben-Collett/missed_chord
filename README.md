@@ -18,8 +18,8 @@ Missed Chord supports two notification backends:
 - ❌ Does not work on Wayland
 
 ### Notify Mode
-- Default on **Wayland**
-- Optional on **X11**
+- Default on **Linux**
+- Optional on **Windows/macOS** and **X11**
 - Uses `notify-send` via D-Bus
 - Requires a notification daemon
 
@@ -27,15 +27,15 @@ These will be referred to as qt mode and notify mode throughout the rest of this
 ## Dependencies
 python 3
 
-On Windows and Linux X11:
+On Windows and macOS:
 - pyside6
-    
+     
 You can run 
 ```bash
 pip install pyside6
 ```
   
-On Linux ***wayland***, as well as X11 if you want to use notify mode instead of qt mode
+On Linux, as well as other platforms if you want to use notify mode instead of qt mode
 - **notify-send** - Desktop notification utility
 - **Notification daemon** - Such as:
   - dunst
