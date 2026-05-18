@@ -4,13 +4,13 @@ from collections import deque
 class RingBuffer:
     def __init__(self, capacity: int):
         self.capacity = capacity
-        self.buffer = deque(maxlen=capacity)
+        self.buffer: deque[str] = deque(maxlen=capacity)
 
-    def add(self, item):
+    def add(self, item: str):
         """Add item to the buffer (removes oldest if full)"""
         self.buffer.append(item)
 
-    def get(self):
+    def get(self) -> list[str]:
         """Get the current buffer as a list"""
         return list(self.buffer)
 
@@ -65,10 +65,9 @@ class RingBuffer:
     def clear(self):
         self.buffer.clear()
 
-    def backspace(self):
+    def backspace(self) -> str | None:
         if not self.is_empty():
             return self.buffer.pop()
 
     def is_empty(self):
         return len(self.buffer) == 0
-

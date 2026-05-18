@@ -4,6 +4,7 @@ import sys
 from config_manager import ConfigManager
 from load_config_map import parse
 from commands import Command
+from my_frozen_dict import MyFrozenDict
 
 
 def reverse_dict(d: dict):
@@ -31,12 +32,17 @@ def flat_inplace_merge_dicts(dict1: dict | None, dict2: dict | None) -> None:
             dict1[key] = val
 
 
-def sets_to_string(sets: list[frozenset[str]]) -> list[str]:
+def dicts_to_strings(dicts: list[MyFrozenDict]) -> list[str]:
+    """
+   dicts should be frequency frozen dicts, from each key to it's corresponding 
+   frequency ex {"h":3}
+    """
     out = []
-    for s in sets:
+    for d in dicts:
         out.append("")
-        for char in s:
-            out[-1] += char
+        for char, freq in d.items():
+            for _ in range(freq):
+                out[-1] += char
     return out
 
 
@@ -83,7 +89,7 @@ def load_chips(config_manager: ConfigManager) -> tuple[dict, dict]:
 
     for key, val in chips.items():
         if isinstance(val, str):
-            out[frozenset(key)] = val
+            out[MyFrozenDict.from_string(key)] = val
         elif isinstance(val, list):
             current_commands: list[Command] = []
             for cmd in val:
@@ -112,13 +118,13 @@ def _to_str(input: list[int]) -> str | None:
     return output
 
 
-def ascii_only(data: dict) -> dict[frozenset[str], str]:
+def ascii_only(data: dict) -> dict[MyFrozenDict, str]:
     # TODO: this should use a frozen dict not a set
     # format: key combinations are stored as a list of integers, with 0 to fix there length I think atleast for the input part
     # these are stored in a list with two elements the trigger followed by the output
     # these are then all stored in the list of chords
     chords: list[list[list[int]]] = data["chords"]
-    out: dict[frozenset[str], str] = {}
+    out: dict[MyFrozenDict, str] = {}
     for pair in chords:
         trig = _to_str(pair[0])
         if not trig:
@@ -127,7 +133,7 @@ def ascii_only(data: dict) -> dict[frozenset[str], str]:
         output = _to_str(pair[1])
         if not output:
             continue
-        out[frozenset(trig.lower())] = uncapitalize(output)
+        out[MyFrozenDict.from_string(trig.lower())] = uncapitalize(output)
     return out
 
 
@@ -149,3 +155,13 @@ def safe_expand_user(path: Path) -> Path:
                 expanded = os.path.expanduser(expanded)
             return Path(expanded)
     return path
+
+
+def overlap_count(s1, s2):
+    count = 0
+
+    for i in range(min(len(s1), len(s2))):
+        if s1[i] != s2[i]:
+            break
+        count += 1
+    return count

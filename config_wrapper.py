@@ -1,6 +1,7 @@
 from chording_modes import ChordingMode
 from commands import Command
 from config import Config
+from my_frozen_dict import MyFrozenDict
 from notification_modes import NotificationMode
 from pathlib import Path
 from load_config_map import parse
@@ -28,12 +29,12 @@ def _parse_config(manager: ConfigManager) -> dict:
     return parse(path) or {}
 
 
-class ConfigWrapper():
+class ConfigWrapper:
     def __init__(self):
         self._manager = ConfigManager(PROJECT_NAME)
 
-        self.data = {}
-        self.reversed_data = {}
+        self.data: dict[MyFrozenDict, str] = {}
+        self.reversed_data: dict[str, list[MyFrozenDict]] = {}
         self._commands = {}
 
         self.on_reload = []
@@ -54,6 +55,21 @@ class ConfigWrapper():
 
     def chara_mode(self) -> bool:
         return self.config.general.mode == ChordingMode.CHARA_CHORDER
+
+    def has_chord(self, trigger: str) -> bool:
+        return MyFrozenDict.from_string(trigger) in self.data
+
+    def get_chord(self, trigger: str) -> str | None:
+        return self.data.get(MyFrozenDict.from_string(trigger))
+
+    def has_chip(self, trigger: str) -> bool:
+        return self.has_chord(trigger)
+
+    def get_chip(self, trigger: str) -> str | None:
+        return self.get_chord(trigger)
+
+    def get_triggers(self, output: str) -> list[MyFrozenDict] | None:
+        return self.reversed_data.get(output)
 
     def filtered(self, s: str) -> bool:
         blocked = self.config.filter.blocked

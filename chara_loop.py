@@ -1,4 +1,5 @@
 from config_wrapper import ConfigWrapper
+from my_frozen_dict import MyFrozenDict
 import utils
 from my_key_event import TERMINATE_EVENT, MyKeyEvent
 from collections import deque
@@ -52,9 +53,6 @@ def _process_event(event: MyKeyEvent, data: CharaLoopData, config_wrapper: Confi
     shift_down = down_mods.shift_down
     is_arrow = event.is_arrow
 
-    chords = config_wrapper.data
-    reversed_chords = config_wrapper.reversed_data
-
     if meta_down or is_arrow:
         buffer.clear()
         possible_chords.clear()
@@ -70,9 +68,11 @@ def _process_event(event: MyKeyEvent, data: CharaLoopData, config_wrapper: Confi
         if ch is not None:
             # lower makes it work if user presses shift while chording
             backspace_queue.append(ch.lower())
-        s = frozenset(backspace_queue)
-        if s in chords:
-            append_captlized_and_uncaptlized(possible_chords, chords[s])
+        backspaced = "".join(backspace_queue)
+        chord = config_wrapper.get_chord(backspaced)
+
+        if chord is not None:
+            append_captlized_and_uncaptlized(possible_chords, chord)
         if ch == " " or ch is None:
             backspace_queue.clear()
             possible_chords.clear()
@@ -85,17 +85,17 @@ def _process_event(event: MyKeyEvent, data: CharaLoopData, config_wrapper: Confi
 
     prev_word = buffer.get_prev_word()
     if buffer.get_trailing_white_space() == " ":
-        prev_uncap = utils.uncapitalize(prev_word)
-        inputs = None
-        if prev_word in reversed_chords.keys():
-            inputs = reversed_chords[prev_word]
-        elif prev_uncap in reversed_chords.keys():
-            inputs = reversed_chords[prev_uncap]
+        inputs: list[MyFrozenDict] | None = config_wrapper.get_triggers(
+            prev_word)
+
+        if inputs is None:
+            prev_uncap = utils.uncapitalize(prev_word)
+            inputs = config_wrapper.get_triggers(prev_uncap)
 
         if config_wrapper.has_command(prev_word):
             _handle_commands(prev_word, buffer, config_wrapper)
         elif inputs and prev_word not in possible_chords:
-            options = utils.sets_to_string(inputs)
+            options = utils.dicts_to_strings(inputs)
             send_notification.display_message(
                 prev_word, options, config_wrapper)
             possible_chords.clear()
