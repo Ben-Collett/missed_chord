@@ -5,6 +5,7 @@ from config_manager import ConfigManager
 from load_config_map import parse
 from commands import Command
 from my_frozen_dict import MyFrozenDict
+from constants import CHARA_FILE_NAME
 
 
 def reverse_dict(d: dict):
@@ -51,10 +52,9 @@ def uncapitalize(s: str) -> str:
 
 
 def load_json(config_manager: ConfigManager) -> dict:
-    FILE_NAME = "chords.json"
-    path = Path(FILE_NAME)
+    path = Path(CHARA_FILE_NAME)
     if not path.exists():
-        path = config_manager.find_config_file(FILE_NAME)
+        path = config_manager.find_config_file(CHARA_FILE_NAME)
 
     empty_chords = {"chords": []}
     if not path.exists():

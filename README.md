@@ -27,12 +27,16 @@ These will be referred to as qt mode and notify mode throughout the rest of this
 ## Dependencies
 python 3
 
-On Windows and macOS:
+if you want to use qt mode:
 - pyside6
+
+if you want to update the chords from the device without manually exporting from the device manager:
+- pyserial
      
 You can run 
 ```bash
 pip install pyside6
+pip install pyserial
 ```
   
 On Linux, as well as other platforms if you want to use notify mode instead of qt mode
@@ -63,7 +67,10 @@ On Windows it's usually `C:\Users\<username>\AppData\Roaming\missed_chord\`
 
 You can see an example configuration file with an explanation for each setting available to you in [example_configs/config.toml](example_configs/config.toml)
 ##  Config for Charachorders
-Export your CharaChorder chord library:
+There are two ways to get the chords from your charachorder to where the program can read it.
+1) you can run the `python main.py -u` with your charachroder connected through the usb.
+this requires the pyserial library to be installed. And will automatically generate a `chords.json` file
+2) Export your CharaChorder chord library:
    - Open the CharaChorder Manager application
    - Export your chord library for backup
    - Copy the exported json file to  the project directory or whatever directory your `config.toml` is in.
@@ -85,6 +92,9 @@ sudo python main.py
 
 
 The program will now monitor your typing and send notifications when you miss chord/chip opportunities.
+
+### Update chords from device
+
 
 ## How It Works
 

@@ -13,12 +13,20 @@ from config_manager import ConfigManager
 from utils import ascii_only, flat_inplace_merge_dicts, load_chips, load_json, reverse_dict
 
 
-def _get_config_file_path(manager: ConfigManager, file_name: str) -> Path | None:
+def get_config_file_path(manager: ConfigManager, file_name: str) -> Path:
     path = Path(file_name)
-    if not path.exists():
+    # if config.toml exist in the poroject directory make it there
+    # else create it in the missed_chord directory
+    config_file = Path(CONFIG_FILE_NAME)
+    if not config_file.exists():
         path = manager.find_config_file(file_name)
+    return path
+
+
+def _get_config_file_path(manager: ConfigManager, file_name: str) -> Path | None:
+    path = get_config_file_path(manager, file_name)
     if not path.exists():
-        path = None
+        return None
     return path
 
 

@@ -1,6 +1,7 @@
 import sys
 import signal
 import queue
+import argparse
 from config_wrapper import ConfigWrapper
 from notification_modes import NotificationMode
 from my_key_event import MyKeyEvent, TERMINATE_EVENT
@@ -8,6 +9,18 @@ import keyboard
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-u", "--update-chords", action="store_true",
+                        help="update chord backup from charachorder device")
+    args = parser.parse_args()
+
+    if args.update_chords:
+        # has to be in here to avoid hard requirement on
+        # pyserial
+        from update_chord_backup import update_chord_backup
+        update_chord_backup()
+        return
+
     config_wrapper = ConfigWrapper()
     keyboard.init(windows_synetic_mode=keyboard.WindowsSyntheticModes.REAL)
     key_queue = queue.Queue()
