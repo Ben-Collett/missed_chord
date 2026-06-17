@@ -82,7 +82,14 @@ def get_all_chords(serial: serial.Serial) -> list[list[str]]:
     return chords
 
 
-def chord_backup_map(chords: list[list[str]]) -> dict:
+def hex_chords_to_list(chords: list[list[str]]) -> list[tuple[int, int]]:
+    structured_chords = []
+    for chord in chords:
+        structured_chords.append(chord_to_list(*chord))
+    return structured_chords
+
+
+def chord_backup_map(chords: list[tuple[int, int]]) -> dict:
     return {
         "charaVersion": 1,
         "type": "chords",

@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import sys
 from config_manager import ConfigManager
+from device_wrapper import DeviceWrapper
 from load_config_map import parse
 from commands import Command
 from my_frozen_dict import MyFrozenDict
@@ -51,16 +52,34 @@ def uncapitalize(s: str) -> str:
     return s[:1].lower() + s[1:]
 
 
-def load_json(config_manager: ConfigManager) -> dict:
+def load_chords(config_manager: ConfigManager, device_wrapper: DeviceWrapper) -> dict:
+    return load_json(config_manager) or device_wrapper.get_data() or {
+        "chords": {}}
+
+
+def load_chords_from_device(device: str) -> dict:
+    from chara_utils import get_all_chords, open_connection, chord_to_list
+    with open_connection(device) as conn:
+        chords = get_all_chords(conn)
+        structured = []
+        for chord in chords:
+            input_codes, output_codes = chord_to_list(*chord)
+            structured.append([input_codes, output_codes])
+        return {"chords": structured}
+
+
+def load_json(config_manager: ConfigManager) -> dict | None:
     path = Path(CHARA_FILE_NAME)
     if not path.exists():
         path = config_manager.find_config_file(CHARA_FILE_NAME)
 
-    empty_chords = {"chords": []}
     if not path.exists():
-        return empty_chords
+        return None
 
-    data = parse(path, defaults=empty_chords) or empty_chords
+    try:
+        data = parse(path)
+    except BaseException:
+        return None
 
     return data
 

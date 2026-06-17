@@ -2,6 +2,7 @@ from chording_modes import ChordingMode
 from commands import Command
 from config import Config
 from my_frozen_dict import MyFrozenDict
+from device_wrapper import DeviceWrapper
 from notification_modes import NotificationMode
 from pathlib import Path
 from load_config_map import parse
@@ -10,7 +11,7 @@ from logger import log_warning
 from constants import PROJECT_NAME, CONFIG_FILE_NAME
 
 from config_manager import ConfigManager
-from utils import ascii_only, flat_inplace_merge_dicts, load_chips, load_json, reverse_dict
+from utils import ascii_only, flat_inplace_merge_dicts, load_chips, load_chords, reverse_dict
 
 
 def get_config_file_path(manager: ConfigManager, file_name: str) -> Path:
@@ -47,6 +48,7 @@ class ConfigWrapper:
 
         self.on_reload = []
         self.config = Config()
+        self.device = DeviceWrapper()
         self.reload()
 
     def get_commands(self, key: str) -> list[Command]:
@@ -103,9 +105,10 @@ class ConfigWrapper:
 
         external_commands: dict[str, list[Command]] | None = None
         if self.chara_mode():
-            self.data = ascii_only(load_json(self._manager))
+            self.data = ascii_only(load_chords(self._manager, self.device))
         else:
             self.data, external_commands = load_chips(self._manager)
+        self.device.first_call = False
 
         self.reversed_data = reverse_dict(self.data)
 

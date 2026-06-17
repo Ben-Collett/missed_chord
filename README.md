@@ -67,14 +67,16 @@ On Windows it's usually `C:\Users\<username>\AppData\Roaming\missed_chord\`
 
 You can see an example configuration file with an explanation for each setting available to you in [example_configs/config.toml](example_configs/config.toml)
 ##  Config for Charachorders
-There are two ways to get the chords from your charachorder to where the program can read it.
-1) you can run the `python main.py -u` with your charachroder connected through the usb.
-this requires the pyserial library to be installed. And will automatically generate a `chords.json` file
-2) Export your CharaChorder chord library:
+There are three ways to get the chords from your charachorder to where the program can read it.
+1) Run the program with no `chords.json` present while a CharaChorder is connected. The device is autodetected and chords are loaded live from it on startup. This is slower than loading from a file. If multiple devices are detected, you will be prompted to select one. If none are detected, chords are set to empty.
+2) Run `python main.py -u` with your charachorder connected through USB. This requires `pyserial` and will generate a `chords.json` file from the device.
+3) Export your CharaChorder chord library:
    - Open the CharaChorder Manager application
    - Export your chord library for backup
-   - Copy the exported json file to  the project directory or whatever directory your `config.toml` is in.
+   - Copy the exported json file to the project directory or wherever your `config.toml` is
    - Rename it to `chords.json`
+
+When you reload the config, chords are loaded from `chords.json` if available. If not, it falls back to the device selected during startup. If no device was selected and exactly one is connected, it is used. If none are connected, chords are set to empty.
 ## Chip Config
 
 If you are using fuzzy_chips' OS level config directory then it will automatically source it's chips from there if not simply copy your config to the same directory as your `config.toml` for this project and rename it to `chips.toml`
