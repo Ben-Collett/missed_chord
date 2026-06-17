@@ -39,12 +39,14 @@ def _parse_config(manager: ConfigManager) -> dict:
 
 
 class ConfigWrapper:
-    def __init__(self):
+    def __init__(self, force_chara=False, force_fuzzy=False):
         self._manager = ConfigManager(PROJECT_NAME)
 
         self.data: dict[MyFrozenDict, str] = {}
         self.reversed_data: dict[str, list[MyFrozenDict]] = {}
         self._commands = {}
+        self._force_chara = force_chara
+        self._force_fuzzy = force_fuzzy
 
         self.on_reload = []
         self.config = Config()
@@ -101,6 +103,10 @@ class ConfigWrapper:
         if log:
             print("reloading...")
         self.config.update(_parse_config(self._manager))
+        if self._force_fuzzy:
+            self.config.general.mode = ChordingMode.FUZZY_CHIPS
+        elif self._force_chara:
+            self.config.general.mode = ChordingMode.CHARA_CHORDER
         self._commands.clear()
 
         external_commands: dict[str, list[Command]] | None = None

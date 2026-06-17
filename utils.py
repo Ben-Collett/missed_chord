@@ -53,8 +53,11 @@ def uncapitalize(s: str) -> str:
 
 
 def load_chords(config_manager: ConfigManager, device_wrapper: DeviceWrapper) -> dict:
-    return load_json(config_manager) or device_wrapper.get_data() or {
-        "chords": {}}
+    data = load_json(config_manager) or device_wrapper.get_data()
+    if data is None:
+        print("no chords detected")
+        data = {"chords": {}}
+    return data
 
 
 def load_chords_from_device(device: str) -> dict:

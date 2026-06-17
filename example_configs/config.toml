@@ -1,8 +1,10 @@
 # general notification config(not qt specific)
 [general]
-# used to set between "charachorder" mode and "fuzzy chips", later will support different chording methods in charachroder,defaults to charachorder
+# used to set between "charachorder" mode and "fuzzy chips", later may support different chording methods in charachroder,defaults to charachorder
 # if using charachorder mode will parse chords.json file to get chords
+# or parse them from your charachorder if none is detected
 # if in "fuzzy chips" mode will parse chips.toml which should be your entire fuzzy chips config
+# this setting can be ignored by using -f to force fuzzy chips mode or -c to force charachorder mode
 mode = "charachorder"
 
 [notification]

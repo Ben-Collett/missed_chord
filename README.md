@@ -95,6 +95,15 @@ sudo python main.py
 
 The program will now monitor your typing and send notifications when you miss chord/chip opportunities.
 
+### Command Line Flags
+
+| Flag | Description |
+|------|-------------|
+| `-h`, `--help` | Show help message and all cli flags and exits |
+| `-u`, `--update-chords` | Update chord backup from a connected CharaChorder device (requires `pyserial`) |
+| `-c`, `--force-chara` | Force CharaChorder mode, ignoring the mode set in config |
+| `-f`, `--force-fuzzy` | Force fuzzy chips mode, ignoring the mode set in config |
+
 ### Update chords from device
 
 

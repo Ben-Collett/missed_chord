@@ -31,11 +31,15 @@ def make_builder() -> Builder:
     builder.comment(" general notification config(not qt specific)")
     builder.add_section("general")
     builder.comment(
-        ' used to set between "charachorder" mode and "fuzzy chips", later will support different chording methods in charachroder,defaults to charachorder')
+        ' used to set between "charachorder" mode and "fuzzy chips", later may support different chording methods in charachroder,defaults to charachorder')
     builder.comment(
         " if using charachorder mode will parse chords.json file to get chords")
     builder.comment(
+        " or parse them from your charachorder if none is detected")
+    builder.comment(
         ' if in "fuzzy chips" mode will parse chips.toml which should be your entire fuzzy chips config')
+    builder.comment(
+        ' this setting can be ignored by using -f to force fuzzy chips mode or -c to force charachorder mode')
     builder.add_field("mode", chord_mode)
     builder.new_line()
 

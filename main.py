@@ -12,6 +12,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-u", "--update-chords", action="store_true",
                         help="update chord backup from charachorder device")
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument("-c", "--force-chara", action="store_true",
+                            help="force charachorder mode regardless of config")
+    mode_group.add_argument("-f", "--force-fuzzy", action="store_true",
+                            help="force fuzzy chips mode regardless of config")
     args = parser.parse_args()
 
     if args.update_chords:
@@ -21,7 +26,10 @@ def main():
         update_chord_backup()
         return
 
-    config_wrapper = ConfigWrapper()
+    config_wrapper = ConfigWrapper(
+        force_chara=args.force_chara,
+        force_fuzzy=args.force_fuzzy,
+    )
     keyboard.init(windows_synetic_mode=keyboard.WindowsSyntheticModes.REAL)
     key_queue = queue.Queue()
 
