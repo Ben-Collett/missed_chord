@@ -263,7 +263,7 @@ def chip_key_loop(key_queue: Queue, config_wrapper: ConfigWrapper):
                         inputs: list[MyFrozenDict] = config_wrapper.get_triggers(
                             prev_word) or []
 
-                        if len(inputs) == 0 and prev_word[0].isupper():
+                        if prev_word != "" and len(inputs) == 0 and prev_word[0].isupper():
                             uncapped = _uncapitlze(prev_word)
                             uncapped_triggers = config_wrapper.get_triggers(
                                 uncapped) or []
