@@ -1,25 +1,33 @@
+from dataclasses import dataclass
 from typing import Optional
 import keyboard
 from keyboard._keyboard_event import KeyboardEvent
 
+from modifier_utils import DownMods
 
+
+@dataclass
 class MyKeyEvent:
+    name: str
+    is_down: bool
+    modifiers: DownMods
+
     @staticmethod
     def from_keyboard_event(event: KeyboardEvent) -> "MyKeyEvent":
-        value = 0
-        if event.event_type == keyboard.KEY_DOWN:
-            value = 1
+        is_down = event.event_type == keyboard.KEY_DOWN
+        name = event.name or ""
+        down_mods = DownMods.from_event_data(
+            name, is_down, event.modifiers or [])
+        return MyKeyEvent(name, is_down, down_mods)
 
-        return MyKeyEvent(event.name, value, event.modifiers)
-
-    def to_utf(self, shift_down: bool) -> Optional[str]:
+    def to_utf(self) -> Optional[str]:
         name = self.name
+        mods = self.modifiers
+        if mods.alt_down or mods.ctrl_down or mods.meta_down:
+            return None
 
-        if len(name) == 1 and shift_down:
-            return name.upper()
         if len(name) == 1:
             return name
-
         if name == "space":
             return " "
         if name == "tab":
@@ -38,17 +46,8 @@ class MyKeyEvent:
         return self.name == "backspace"
 
     @property
-    def is_down_event(self):
-        return self.value == 1
-
-    @property
-    def is_up_event(self):
-        return not self.is_down_event
-
-    def __init__(self, name: str, value: int, modifiers: list[str]):
-        self.name: str = name
-        self.value: int = value
-        self.modifiers = modifiers
+    def is_up(self):
+        return not self.is_down
 
 
 class TerminateEvent():

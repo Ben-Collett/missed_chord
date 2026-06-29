@@ -7,7 +7,6 @@ import send_notification
 from queue import Queue
 from buffer import RingBuffer
 from commands import Command
-from modifier_utils import DownMods
 from logger import log_warning
 from dataclasses import dataclass
 
@@ -48,9 +47,7 @@ def _process_event(event: MyKeyEvent, data: CharaLoopData, config_wrapper: Confi
     backspace_queue = data.backspace_queue
     possible_chords = data.possible_chords
 
-    down_mods = DownMods.from_event(event)
-    meta_down = down_mods.meta_down
-    shift_down = down_mods.shift_down
+    meta_down = event.modifiers.meta_down
     is_arrow = event.is_arrow
 
     if meta_down or is_arrow:
@@ -59,7 +56,7 @@ def _process_event(event: MyKeyEvent, data: CharaLoopData, config_wrapper: Confi
         backspace_queue.clear()
         return
 
-    if event.is_up_event:
+    if event.is_up:
         return
 
     if event.is_backspace:
@@ -77,7 +74,7 @@ def _process_event(event: MyKeyEvent, data: CharaLoopData, config_wrapper: Confi
             backspace_queue.clear()
             possible_chords.clear()
 
-    utf = event.to_utf(shift_down)
+    utf = event.to_utf()
     if not utf:
         return
 

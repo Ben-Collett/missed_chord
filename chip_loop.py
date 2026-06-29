@@ -187,21 +187,12 @@ def chip_key_loop(key_queue: Queue, config_wrapper: ConfigWrapper):
     def process_event(event: MyKeyEvent):
         nonlocal buffer, expected_string
         name = event.name
-        value = event.value
-        down_modes = DownMods.from_event(event)
-        shift_down = down_modes.shift_down
-        meta_down = down_modes.meta_down
+        meta_down = event.modifiers.meta_down
 
         expanding = not expected_string.is_empty()
         ch = None
-        if value == 1:
-            if name == "space":
-                ch = " "
-            elif len(name) == 1 and shift_down:
-                ch = name.upper()
-            elif len(name) == 1:
-                ch = name
-
+        if event.is_down:
+            ch = event.to_utf()
             expected_string.clear_if_should(ch)
 
         if meta_down:
@@ -211,15 +202,15 @@ def chip_key_loop(key_queue: Queue, config_wrapper: ConfigWrapper):
         prev_word = buffer.get_prev_word()
 
         if prev_event is not None:
-            just_shifted = prev_event.is_down_event and "shift" in prev_event.name
+            just_shifted = prev_event.is_down and "shift" in prev_event.name
         else:
             just_shifted = False
 
-        is_shift_release_event = event.is_up_event and "shift" in name
+        is_shift_release_event = event.is_up and "shift" in name
         if just_shifted and is_shift_release_event and not expanding:
             expected_string.set_value(prev_word+" ")
             expected_string.toggle_case()
-        elif value == 0:
+        elif event.is_up:
             return
         # guaranteed to be a down event past this point
 
