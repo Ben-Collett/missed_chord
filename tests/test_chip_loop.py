@@ -97,20 +97,25 @@ class TestChipLoop:
     @pytest.mark.parametrize(
         ("text", "toggled"),
         [
-            ("the", "The"),
-            ("that", "That"),
-            ("thing", "Thing"),
-            # TODO: I don't know what's happening here:
-            # ("The", "the"),
-            # ("That", "that"),
+            ("the ", "The "),
+            ("that ", "That "),
+            ("the <shift>", "The "),
+            ("that <shift>", "That "),
+            ("thing ", "Thing "),
+            ("The <shift>", "the "),
+            ("That <shift>", "that "),
         ],
     )
     def test_toggle_case(self, text: str, toggled: str):
+        prefix = ""
+        if text.endswith("<shift>"):
+            prefix = "<shift>"
+            text = text.removesuffix("<shift>")
 
         text += " "
         toggled += " "
         data = _basic_chip_loop_data(text)
-        queue = create_event_queue_str(f"<bs:{len(text)}>{toggled}")
+        queue = create_event_queue_str(f"{prefix}<bs:{len(text)}>{toggled}")
         chip_loop(queue, data)
         assert "".join(data.buffer.get()) == toggled
         if isinstance(data.notification_sender, NotificationSenderMock):

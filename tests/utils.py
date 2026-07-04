@@ -3,6 +3,7 @@ from modifier_utils import DownMods
 from my_key_event import MyKeyEvent, TERMINATE_EVENT
 _NAMED_EVENTS = {
     "bs": "backspace",
+    "shift": "shift",
     "tab": "tab",
     "enter": "enter",
     "return": "enter",
