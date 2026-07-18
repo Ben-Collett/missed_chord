@@ -1,5 +1,4 @@
 from config_wrapper import ConfigWrapper
-from my_frozen_dict import MyFrozenDict
 from my_key_event import TERMINATE_EVENT
 from buffer import RingBuffer
 from logger import log_warning
@@ -8,7 +7,7 @@ from my_key_event import MyKeyEvent
 from commands import Command
 from notifier import ConfigNotificationSender
 from utils import dicts_to_strings, overlap_count
-from chip_loop_utils import ChipLoopData, probable_chip, capitalizeith, is_captlized, uncapitlze, valid_capitlized, valid_upper_case, ExpectedString, is_all_caps
+from chip_loop_utils import ChipLoopData, probable_chip, capitalizeith, is_captlized, uncapitlze, ExpectedString, strip_nonalnum, find_triggers_for_word
 
 
 def process_event_wrapper(event: MyKeyEvent, data: ChipLoopData):
@@ -21,6 +20,7 @@ def process_event(data: ChipLoopData):
     event = data.current_event
     if event is None:
         return
+
     expected_string = data.expacted_string
     config_wrapper = data.config_wrapper
     prev_event = data.prev_event
@@ -83,6 +83,8 @@ def process_event(data: ChipLoopData):
             and I'm only checking cpatlizing the first 1 or 2 character
             """
 
+            stripped_prev = strip_nonalnum(prev_word)
+
             changing_case = is_captlized(prev_word) and uncapitlze(
                 prev_word) == "".join(reversed(backspace_list))
             if not changing_case:
@@ -90,29 +92,20 @@ def process_event(data: ChipLoopData):
                 backspaced_word = "".join(backspace_list)
                 backspaced_chip = config_wrapper.get_chip(
                     backspaced_word) or ""
+
+                # if statement prevents triggering when toggling the captlizaiton of prev word
                 if capitalizeith(backspaced_word, 0) != prev_word and capitalizeith(backspaced_chip, 0) != prev_word:
-                    inputs: list[MyFrozenDict] = config_wrapper.get_triggers(
-                        prev_word) or []
 
-                    if prev_word != "" and len(inputs) == 0 and prev_word[0].isupper():
-                        uncapped = uncapitlze(prev_word)
-                        uncapped_triggers = config_wrapper.get_triggers(
-                            uncapped) or []
-
-                        inputs = valid_capitlized(
-                            uncapped_triggers, config_wrapper)
-                    if len(inputs) == 0 and is_all_caps(prev_word):
-                        lower = prev_word.lower()
-                        lower_triggers = config_wrapper.get_triggers(
-                            lower) or []
-                        inputs = valid_upper_case(
-                            lower_triggers, config_wrapper)
+                    inputs, lookup_word = find_triggers_for_word(
+                        stripped_prev, prev_word, backspaced_word, backspaced_chip, config_wrapper)
 
                     inputs_list: list[str] = dicts_to_strings(inputs)
 
-                    if len(inputs_list) > 0:
+                    if len(inputs_list) > 0 and not (
+                        stripped_prev != prev_word and backspace_list
+                    ):
                         data.send_notification(
-                            prev_word, inputs_list)
+                            lookup_word, inputs_list)
     if name == "space":
         backspace_list.clear()
 

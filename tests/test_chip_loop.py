@@ -29,7 +29,8 @@ class ChipLoopMock(ChipLoopData):
 
 
 def _basic_chip_loop_data(initial_data: str) -> ChipLoopMock:
-    STR_CHORDS = {"t": "the", "s": "these", "th": "that", "h": "here", }
+    STR_CHORDS = {"t": "the", "s": "these",
+                  "th": "that", "h": "here", "s.": "shallow", "lg": "long", "lg.": "superlong."}
     COMMANDS = {"RL": ["reload_config"]}
     chords = {}
     for key, val in STR_CHORDS.items():
@@ -146,11 +147,30 @@ class TestChipLoop:
             # so that it only works after punctuation instead of always
             # being negative
             ("t <bs:2>The ", []),
-            ("th <bs>That", []),
-            ("ht <bs:3>That", []),
+            ("th <bs:3>That ", []),
+            ("ht <bs:3>That ", []),
 
+            ("that. ", [ChordTrig("that", ['th'])]),
+            ("these@ ", [ChordTrig("these", ['s'])]),
+            ("th. <bs:2>at. ", []),
+            ("th, <bs:2>at, ", []),
+            ("ht, <bs:4>that, ", []),
+            ("s. <bs:2>shallow", []),
+            ("these. ", [ChordTrig("these", ['s'])]),
+            ("These. ", [ChordTrig("These", ['S'])]),
+            ("shallow ", [ChordTrig("shallow", ["s."])]),
             ("th <bs:3>that ", [ChordTrig("that", ['th'])]),
             ("lt <bs:3>that ", [ChordTrig("that", ["th"])]),
+            ("s, <bs:2>these, ", []),
+            (".these ", [ChordTrig("these", ['s'])]),
+            (".s <bs:2>these ", []),
+
+            ("THAT ", [ChordTrig("THAT", ['TH'])]),
+            ("superlong. ", [ChordTrig("superlong.", ["lg."])]),
+            ("Superlong. ", [ChordTrig("Superlong.", ["Lg."])]),
+            ("SUPERLONG. ", [ChordTrig("SUPERLONG.", ["LG."])]),
+            ("lg. <bs:3>superlong. ", [])
+
         ],)
     def test_expand(self, text: str, expected_chords: list[ChordTrig]):
         queue = create_event_queue_str(text)

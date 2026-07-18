@@ -1,5 +1,5 @@
 import pytest
-from chip_loop_utils import ExpectedString, probable_chip
+from chip_loop_utils import ExpectedString, probable_chip, strip_nonalnum
 from config_wrapper import ConfigWrapper
 
 
@@ -131,6 +131,27 @@ class TestExpectedString:
         assert es._value[0] == "E"
         es.clear()
         assert es.is_empty()
+
+
+class TestStripNonAlnum:
+    @pytest.mark.parametrize(
+        ("word", "expected"),
+        [
+            ("abc", "abc"),
+            (".abc", "abc"),
+            ("abc.", "abc"),
+            ("abc,", "abc"),
+            (".abc.", "abc"),
+            ("a.b", "a.b"),
+            ("..", ""),
+            ("", ""),
+            ("123", "123"),
+            ("!@#", ""),
+            ("..abc..", "abc"),
+        ],
+    )
+    def test_strip_nonalnum(self, word, expected):
+        assert strip_nonalnum(word) == expected
 
 
 class TestProbableChip:

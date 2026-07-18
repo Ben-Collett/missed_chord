@@ -40,6 +40,17 @@ def uncapitlze(s: str):
     return s[0].lower() + s[1:]
 
 
+def strip_nonalnum(word: str) -> str:
+    """Remove leading/trailing non-alphanumeric characters."""
+    start = 0
+    end = len(word)
+    while start < end and not word[start].isalnum():
+        start += 1
+    while end > start and not word[end - 1].isalnum():
+        end -= 1
+    return word[start:end]
+
+
 def capitalizeith(s: str, i: int) -> str:
     if i >= len(s):
         return s
@@ -106,6 +117,67 @@ def find_match_captitle_iter(s, condition):
                 return result
 
     return None
+
+
+def _lookup_triggers(
+    primary: str,
+    fallback: str,
+    config_wrapper: ConfigWrapper,
+) -> tuple[list[MyFrozenDict], bool]:
+    """Try triggers for `primary`; if none and primary != fallback, try `fallback`.
+
+    Returns (inputs, used_fallback). `inputs` is the matched triggers, and
+    used_fallback is True only when the fallback spelling was the one that
+    matched (so the caller knows to display `fallback` instead of `primary`).
+    """
+    inputs: list[MyFrozenDict] = config_wrapper.get_triggers(primary) or []
+    used_fallback = False
+    if len(inputs) == 0 and primary != fallback:
+        fb = config_wrapper.get_triggers(fallback) or []
+        if len(fb) > 0:
+            inputs, used_fallback = fb, True
+    return inputs, used_fallback
+
+
+def find_triggers_for_word(
+    stripped_prev: str,
+    prev_word: str,
+    backspaced_word: str,
+    backspaced_chip: str,
+    config_wrapper: ConfigWrapper,
+) -> tuple[list[MyFrozenDict], str]:
+    """Resolve matching triggers (and the word to display) for a space press.
+
+    Tries, in order: exact stripped match, a capitalized variant, then an
+    all-caps variant. Each step falls back to the raw prev_word spelling when
+    the stripped spelling yields nothing and the two differ. Returns
+    (inputs, lookup_word); inputs is empty when nothing matched.
+    """
+    # skip when toggling the capitalization of the previous word
+    if capitalizeith(backspaced_word, 0) == prev_word or capitalizeith(backspaced_chip, 0) == prev_word:
+        return [], stripped_prev
+
+    lookup_word = stripped_prev
+    inputs, used_fallback = _lookup_triggers(
+        stripped_prev, prev_word, config_wrapper)
+    if used_fallback:
+        lookup_word = prev_word
+
+    if len(inputs) == 0 and stripped_prev != "" and stripped_prev[0].isupper():
+        cap_inputs, used_fallback = _lookup_triggers(
+            uncapitlze(stripped_prev), uncapitlze(prev_word), config_wrapper)
+        if used_fallback:
+            lookup_word = prev_word
+        inputs = valid_capitlized(cap_inputs, config_wrapper)
+
+    if len(inputs) == 0 and is_all_caps(stripped_prev):
+        lower_inputs, used_fallback = _lookup_triggers(
+            stripped_prev.lower(), prev_word.lower(), config_wrapper)
+        if used_fallback:
+            lookup_word = prev_word
+        inputs = valid_upper_case(lower_inputs, config_wrapper)
+
+    return inputs, lookup_word
 
 
 def probable_chip(prev_word: str, config_wrapper: ConfigWrapper) -> str | None:
