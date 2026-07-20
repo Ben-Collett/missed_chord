@@ -37,6 +37,7 @@ def process_event(data: ChipLoopData):
 
     if meta_down:
         buffer.clear()
+        data.last_chip_output = None
         return
 
     prev_word = buffer.get_prev_word()
@@ -62,6 +63,11 @@ def process_event(data: ChipLoopData):
             else:
                 backspace_list.append(backspaced)
 
+        # the previous word was fully deleted, so any chip notified for it is
+        # no longer "in play"; a later retype counts as a brand new word
+        if buffer.get_prev_word() == "":
+            data.last_chip_output = None
+
         return
 
     if name == "space" and not expanding:
@@ -72,11 +78,13 @@ def process_event(data: ChipLoopData):
             non_overlap = chip[overlap:]+" "
             expected_string.set_value(non_overlap)
 
+            data.last_chip_output = chip
+
             buffer.add(" ")
             return
         elif white_space == "":
             """
-            here is the ruff approach if there is an exact match the user could have used a chip
+            here is the rough approach if there is an exact match the user could have used a chip
             if there is not an exact match but the first word was captlized or in allcaps then 
             maybe there was a match if it's in all caps then maybe there was an approah
             instead of checking all cases I'm only going to handle when the inputs are all lower case
@@ -84,6 +92,12 @@ def process_event(data: ChipLoopData):
             """
 
             stripped_prev = strip_nonalnum(prev_word)
+
+            # if the (stripped) word is itself a chip trigger, note its output so
+            # that backspacing and re-forming the same chip isn't notified again
+            stripped_chip = config_wrapper.get_chip(stripped_prev)
+            if stripped_chip is not None:
+                data.last_chip_output = stripped_chip
 
             changing_case = is_captlized(prev_word) and uncapitlze(
                 prev_word) == "".join(reversed(backspace_list))
@@ -104,12 +118,26 @@ def process_event(data: ChipLoopData):
                     if len(inputs_list) > 0 and not (
                         stripped_prev != prev_word and backspace_list
                     ):
-                        data.send_notification(
-                            lookup_word, inputs_list)
+                        # avoid re-notifying the same chip while the user is just
+                        # refining a word they already saw a notification for.
+                        # compare case-insensitively: "That" and "that" are the
+                        # same chip (only capitalization differs, e.g. after a
+                        # punctuation mark)
+                        if lookup_word.casefold() != (data.last_chip_output or "").casefold():
+                            data.send_notification(
+                                lookup_word, inputs_list)
+                        data.last_chip_output = lookup_word
     if name == "space":
         backspace_list.clear()
 
     if ch:
+        # an alphanumeric typed right after a real word-separating space starts
+        # a new word; clear the last chip so a later identical chip can notify.
+        # skip when an expansion is still being completed (expected_string set)
+        # and ignore non-alphanumeric chars (punctuation appended to a word
+        # doesn't start a new word worth re-notifying)
+        if ch.isalnum() and prev_event is not None and prev_event.name == "space" and expected_string.is_empty():
+            data.last_chip_output = None
         expected_string.safe_remove_first()
         buffer.add(ch)
 

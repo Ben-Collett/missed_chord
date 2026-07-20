@@ -30,3 +30,17 @@ class DownMods:
             out.update_from_mod(mod)
 
         return out
+
+    @staticmethod
+    def from_down_mods(other: "DownMods", shift_down: bool = None, **kwargs) -> "DownMods":
+        out = DownMods(
+            shift_down=other.shift_down,
+            ctrl_down=other.ctrl_down,
+            alt_down=other.alt_down,
+            meta_down=other.meta_down,
+        )
+        if shift_down is not None:
+            out.shift_down = shift_down
+        for key, value in kwargs.items():
+            setattr(out, key, value)
+        return out

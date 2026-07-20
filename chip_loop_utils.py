@@ -252,9 +252,12 @@ class ChipLoopData:
     buffer: RingBuffer
     backspace_list: list[str]
     expacted_string: ExpectedString
+    # the output of the last chip that was expanded or notified, used to
+    # avoid re-notifying the same chip while editing the same word
+    last_chip_output: str | None = None
 
     # changed by process_event_wrapper
-    current_event: MyKeyEvent | None
+    current_event: MyKeyEvent | None = None
     prev_event:  MyKeyEvent | None = None
 
     # TODO: ugly, nice for testing but sending notification from

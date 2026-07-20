@@ -53,15 +53,20 @@ class TestDownMods:
     @pytest.mark.parametrize(
         ("event_name", "is_down", "modifiers", "expected"),
         [
-            ("a", True, [], DownMods(shift_down=False, ctrl_down=False, alt_down=False, meta_down=False)),
+            ("a", True, [], DownMods(shift_down=False,
+             ctrl_down=False, alt_down=False, meta_down=False)),
             ("shift", True, [], DownMods(shift_down=True)),
             ("shift", False, [], DownMods(shift_down=False)),
             ("a", True, ["shift"], DownMods(shift_down=True)),
-            ("a", True, ["ctrl", "alt"], DownMods(ctrl_down=True, alt_down=True)),
-            ("ctrl", True, ["shift"], DownMods(shift_down=True, ctrl_down=True)),
+            ("a", True, ["ctrl", "alt"], DownMods(
+                ctrl_down=True, alt_down=True)),
+            ("ctrl", True, ["shift"], DownMods(
+                shift_down=True, ctrl_down=True)),
             ("a", False, ["shift"], DownMods(shift_down=True)),
             ("a", False, [], DownMods()),
-            ("windows", True, ["ctrl"], DownMods(ctrl_down=True, meta_down=True)),
+            ("windows", True, ["ctrl"], DownMods(
+                ctrl_down=True, meta_down=True)),
+            ("windows", True, [], DownMods(meta_down=True)),
         ],
     )
     def test_from_event_data(self, event_name, is_down, modifiers, expected):

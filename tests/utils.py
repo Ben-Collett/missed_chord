@@ -35,8 +35,22 @@ def ev(name: str, is_down=True, down_mods=None) -> MyKeyEvent:
     return MyKeyEvent(name, is_down, down_mods)
 
 
+def _resolve_modifier(name: str) -> str | None:
+    lowered = name.lower()
+    if "shift" in lowered:
+        return "shift"
+    if "ctrl" in lowered:
+        return "ctrl"
+    if "alt" in lowered:
+        return "alt"
+    if "windows" in lowered or "meta" in lowered or "win" in lowered:
+        return "meta"
+    return None
+
+
 def events_from_text(text: str, terminate=True) -> list[MyKeyEvent]:
     out = []
+    active_mods = DownMods()
     i = 0
     while i < len(text):
         if text[i] == '<':
@@ -63,9 +77,25 @@ def events_from_text(text: str, terminate=True) -> list[MyKeyEvent]:
 
             resolved_name = _NAMED_EVENTS.get(name, name)
 
-            for _ in range(count):
-                out.append(ev(resolved_name, True))
-                out.append(ev(resolved_name, False))
+            mod_key = _resolve_modifier(resolved_name)
+            if mod_key is not None:
+                direction = count_str if ':' in inner else "press"
+                for _ in range(count):
+                    if direction == "down":
+                        out.append(ev(resolved_name, True, DownMods.from_down_mods(active_mods, **{f"{mod_key}_down": True})))
+                        setattr(active_mods, f"{mod_key}_down", True)
+                    elif direction == "up":
+                        out.append(ev(resolved_name, True, DownMods.from_down_mods(active_mods)))
+                        setattr(active_mods, f"{mod_key}_down", False)
+                    else:
+                        down_event = DownMods.from_down_mods(active_mods, **{f"{mod_key}_down": True})
+                        out.append(ev(resolved_name, True, down_event))
+                        out.append(ev(resolved_name, False, DownMods.from_down_mods(active_mods)))
+                        setattr(active_mods, f"{mod_key}_down", False)
+            else:
+                for _ in range(count):
+                    out.append(ev(resolved_name, True, DownMods.from_down_mods(active_mods)))
+                    out.append(ev(resolved_name, False, DownMods.from_down_mods(active_mods)))
 
             i = end + 1
         else:
@@ -77,9 +107,9 @@ def events_from_text(text: str, terminate=True) -> list[MyKeyEvent]:
                 ch = "tab"
             elif ch == "\n":
                 ch = "enter"
-            out.append(ev(ch, True, DownMods(shift_down=shift_down)))
+            out.append(ev(ch, True, DownMods.from_down_mods(active_mods, shift_down=shift_down)))
 
-            out.append(ev(ch, False))
+            out.append(ev(ch, False, DownMods.from_down_mods(active_mods)))
             i += 1
     if terminate:
         out.append(TERMINATE_EVENT)
