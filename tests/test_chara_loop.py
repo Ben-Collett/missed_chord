@@ -141,7 +141,12 @@ class TestCharaLoop:
             ("th<bs:2>That ", []),
             ("ht<bs:2>That ", []),
 
+
+            ("ht<bs:2>that <bs> ", []),
             ("th that ", [ChordTrig("that", ['th'])]),
+            ("that that ", [ChordTrig("that", ['th']),
+             ChordTrig("that", ['th'])]),
+            ("th that <bs>  <bs:2> ", [ChordTrig("that", ['th'])]),
             ("lt<bs:2>that ", [ChordTrig("that", ["th"])]),
         ],)
     def test_expand(self, text: str, expected_chords: list[ChordTrig]):

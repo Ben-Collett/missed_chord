@@ -19,7 +19,12 @@ class CharaLoopData:
     possible_chords: list[str]
     config_wrapper: ConfigWrapper
     notification_sender: NotificationSender
+
     just_backspaced: bool = False
+    # if the user has typed only white space characters
+    # and then backspaces to the previous word and hit's space again
+    # it should not trigger a notification
+    just_backspaced_space: bool = False
     event: MyKeyEvent | None = None
 
     def send_notification(self, chord, triggers):
@@ -53,6 +58,8 @@ def process_event(data: CharaLoopData):
         buffer.clear()
         possible_chords.clear()
         backspace_queue.clear()
+        data.just_backspaced = False
+        data.just_backspaced_space = False
         return
 
     if event.is_up:
@@ -61,6 +68,8 @@ def process_event(data: CharaLoopData):
     if event.is_backspace:
         data.just_backspaced = True
         ch = buffer.backspace()
+        if ch == " ":
+            data.just_backspaced_space = True
         if ch is not None:
             # lower makes it work if user presses shift while chording
             backspace_queue.append(ch.lower())
@@ -91,8 +100,10 @@ def process_event(data: CharaLoopData):
         if config_wrapper.has_command(prev_word):
             _handle_commands(prev_word, buffer, config_wrapper)
         elif inputs and prev_word not in possible_chords:
-            options = utils.dicts_to_strings(inputs)
-            data.send_notification(prev_word, options)
+            if not data.just_backspaced_space:
+                options = utils.dicts_to_strings(inputs)
+                data.send_notification(prev_word, options)
+
             possible_chords.clear()
 
     # I need to check length in case the user backspaced while the buffer was empty
@@ -107,8 +118,13 @@ def process_event(data: CharaLoopData):
         backspace_queue.clear()
 
     data.possible_chords = possible_chords
+
     # we early return with the if not utf check if we backspaced, so this is guaranteed to be false
     data.just_backspaced = False
+
+    # don't reset on typing white space
+    if utf.isspace():
+        data.just_backspaced_space = False
 
 
 def chara_loop(key_queue: Queue, data: CharaLoopData):
