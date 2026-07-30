@@ -140,8 +140,7 @@ class TestCharaLoop:
             ("te<bs:2>The ", []),
             ("th<bs:2>That ", []),
             ("ht<bs:2>That ", []),
-
-
+            ("t <bs>he ", [ChordTrig("the", ['te'])]),
             ("ht<bs:2>that <bs> ", []),
             ("th that ", [ChordTrig("that", ['th'])]),
             ("that that ", [ChordTrig("that", ['th']),

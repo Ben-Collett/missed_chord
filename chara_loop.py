@@ -123,7 +123,7 @@ def process_event(data: CharaLoopData):
     data.just_backspaced = False
 
     # don't reset on typing white space
-    if utf.isspace():
+    if not utf.isspace():
         data.just_backspaced_space = False
 
 
