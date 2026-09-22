@@ -46,6 +46,15 @@ notification_height = 100
 log_to_stdout = false
 # log to a file will create file/parent dirs if needed, default = ""
 log_to_path = ""
+# mode controls how the chip_path and chord_path files are written:
+# "load" loads the file on startup and on mode changes, giving a running log across sessions, default = "load"
+# "overwrite" overwrites the file each session, destroying the previous session's data
+# "increment" never loads and writes to a fresh file, using a numbered suffix (foo.json, foo_1.json, ...) on collision
+mode = "load"
+# chip_path: missed chips are written to this file as json, only used in fuzzy chips mode, default = ""
+chip_path = ""
+# chord_path: missed chords are written to this file as json, only used in charachorder mode, default = ""
+chara_path = ""
 
 # these features are experimental and do not work the best in all environments
 [experimental]
@@ -64,4 +73,3 @@ notification_bar_update_frequency = 0
 [commands]
 RL = ["reload_config"]
 CB = ["clear_buffer"]
-

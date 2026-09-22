@@ -8,12 +8,15 @@ def make_builder() -> Builder:
         "from chording_modes import ChordingMode",
         "from duration import Duration",
         "from parse_command_section import parse_command_section",
-        "from notification_modes import NotificationMode"]
+        "from notification_modes import NotificationMode",
+        "from logging_modes import LoggingMode"]
     chord_mode = GenCustom(
         parse_command="ChordingMode.parse($value)", config_value=GenStr("charachorder"), code_type="ChordingMode")
 
     notification_mode = GenCustom(
         parse_command="NotificationMode.parse($value)", config_value=GenStr("auto"), code_type="NotificationMode")
+    logging_mode = GenCustom(
+        parse_command="LoggingMode.parse($value)", config_value=GenStr("load"), code_type="LoggingMode")
     duration = GenCustom(
         parse_command="Duration.parse($value, Duration(3000))", config_value=GenAny(GenInt(3000)), code_type="Duration")
     update_frequency = GenCustom(
@@ -103,6 +106,21 @@ def make_builder() -> Builder:
     builder.comment(
         ' log to a file will create file/parent dirs if needed, default = ""')
     builder.add_str("log_to_path", "")
+    builder.comment(
+        " mode controls how the chip_path and chord_path files are written:")
+    builder.comment(
+        ' "load" loads the file on startup and on mode changes, giving a running log across sessions, default = "load"')
+    builder.comment(
+        ' "overwrite" overwrites the file each session, destroying the previous session\'s data')
+    builder.comment(
+        ' "increment" never loads and writes to a fresh file, using a numbered suffix (foo.json, foo_1.json, ...) on collision')
+    builder.add_field("mode", logging_mode)
+    builder.comment(
+        ' chip_path: missed chips are written to this file as json, only used in fuzzy chips mode, default = ""')
+    builder.add_str("chip_path", "")
+    builder.comment(
+        ' chord_path: missed chords are written to this file as json, only used in charachorder mode, default = ""')
+    builder.add_str("chara_path", "")
 
     builder.new_line()
     builder.comment(

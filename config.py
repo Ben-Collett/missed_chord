@@ -4,6 +4,7 @@ from chording_modes import ChordingMode
 from duration import Duration
 from parse_command_section import parse_command_section
 from notification_modes import NotificationMode
+from logging_modes import LoggingMode
 
 class _ExpectedField:
     def __init__(self, default_value=None, cftype=None):
@@ -107,7 +108,7 @@ def _merge_expected(config_map: dict, expected_map: dict, ignored_sections=set()
     return result
 
 def _get_expected_map():
-    return {"general": {"mode": _ExpectedField("charachorder", str)}, "notification": {"mode": _ExpectedField("auto", str), "title": _ExpectedField("possible missed chord", str), "message": _ExpectedField("$triggers = $chord", str), "duration": _ExpectedField(None)}, "filter": {"blocked": _ExpectedList([], str), "allowed": _ExpectedList([], str)}, "qt": {"duration_height": _ExpectedField(8, int), "max_notifications": _ExpectedField(3, int), "notification_width": _ExpectedField(400, int), "notification_height": _ExpectedField(100, int)}, "logging": {"log_to_stdout": _ExpectedField(False, bool), "log_to_path": _ExpectedField("", str)}, "experimental": {"notification_bar_update_frequency": _ExpectedField(None)}}
+    return {"general": {"mode": _ExpectedField("charachorder", str)}, "notification": {"mode": _ExpectedField("auto", str), "title": _ExpectedField("possible missed chord", str), "message": _ExpectedField("$triggers = $chord", str), "duration": _ExpectedField(None)}, "filter": {"blocked": _ExpectedList([], str), "allowed": _ExpectedList([], str)}, "qt": {"duration_height": _ExpectedField(8, int), "max_notifications": _ExpectedField(3, int), "notification_width": _ExpectedField(400, int), "notification_height": _ExpectedField(100, int)}, "logging": {"log_to_stdout": _ExpectedField(False, bool), "log_to_path": _ExpectedField("", str), "mode": _ExpectedField("load", str), "chip_path": _ExpectedField("", str), "chara_path": _ExpectedField("", str)}, "experimental": {"notification_bar_update_frequency": _ExpectedField(None)}}
 
 class Config:
     def __init__(self, config_map: dict | None = None):
@@ -182,6 +183,9 @@ class LoggingSection:
     def update(self, smap: dict):
         self.log_to_stdout: bool = smap["log_to_stdout"]
         self.log_to_path: str = smap["log_to_path"]
+        self.mode: LoggingMode = LoggingMode.parse(smap["mode"])
+        self.chip_path: str = smap["chip_path"]
+        self.chara_path: str = smap["chara_path"]
 
 class ExperimentalSection:
     def __init__(self, smap: dict):

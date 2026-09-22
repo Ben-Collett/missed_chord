@@ -80,6 +80,29 @@ When you reload the config, chords are loaded from `chords.json` if available. I
 ## Chip Config
 
 If you are using fuzzy_chips' OS level config directory then it will automatically source it's chips from there if not simply copy your config to the same directory as your `config.toml` for this project and rename it to `chips.toml`
+## Logging
+
+The `[logging]` section of `config.toml` controls where missed opportunities are recorded.
+
+- `log_to_stdout` - print missed chords/chips to the terminal, sorted by frequency
+- `log_to_path` - write a human readable log to a file. This always contains both missed chords and missed chips, and is rewritten every time a new miss is recorded
+- `chip_path` / `chord_path` - write missed chips/chords to a json file. Only one is used at a time, depending on whether you are in fuzzy chips or charachorder mode, and only the relevant type of miss is written to it
+
+The json files store a list of entries in the form:
+
+```json
+[{"triggers": ["t h e"], "chord": "the", "count": 3}]
+```
+
+`mode` controls how the `chip_path`/`chord_path` files behave:
+
+| mode | behavior |
+|------|----------|
+| `load` (default) | The file is loaded on startup and whenever the chording mode changes, then rewritten with your new misses. This gives a running log across sessions |
+| `overwrite` | The file is never loaded, and is overwritten with each new session, destroying the previous session's data |
+| `increment` | The file is never loaded. If the file already exists a new one is created with a numbered suffix (`missed.json`, `missed_1.json`, `missed_2.json`, ...) so no previous session's data is destroyed |
+
+If `chip_path` and `chord_path` are both empty (the default), the `mode` setting has no effect.
 ## Usage
 
 **Important:** On wayland(or X11 in notify mode) this program must be run in user mode, not with `sudo`. The script will prompt you for your admin password when needed to access keyboard input on Wayland.
